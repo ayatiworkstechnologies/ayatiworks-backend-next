@@ -167,6 +167,14 @@
     @apply px-3 py-1.5 text-xs;
   }
 
+  .btn-xs {
+    @apply px-2 py-1 text-xs;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+
   .btn-icon {
     @apply p-2.5 aspect-square rounded-xl;
   }

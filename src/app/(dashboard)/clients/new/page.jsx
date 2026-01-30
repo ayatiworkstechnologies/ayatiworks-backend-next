@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardHeader, CardBody } from '@/components/ui';
+import { Card, CardHeader, CardBody, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import api from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
 import {
-  HiOutlineArrowLeft, HiOutlineOfficeBuilding, HiOutlineMail,
+  HiOutlineOfficeBuilding, HiOutlineMail,
   HiOutlinePhone, HiOutlineGlobe, HiOutlineUser, HiOutlineCheck
 } from 'react-icons/hi';
 
@@ -98,14 +98,12 @@ export default function CreateClientPage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="page-header">
-        <div>
-          <Link href="/clients" className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700">
-            <HiOutlineArrowLeft className="w-4 h-4" /> Back to Clients
-          </Link>
-          <h1 className="page-title mt-2">Add New Client</h1>
-        </div>
-      </div>
+      <PageHeader
+        title="Add New Client"
+        description="Create a new client profile"
+        backLink="/clients"
+        backText="Back to Clients"
+      />
 
       <form onSubmit={handleSubmit}>
         <Card className="mb-6">

@@ -138,6 +138,39 @@ class ApiClient {
   delete(endpoint) {
     return this.request(endpoint, { method: 'DELETE' });
   }
+
+  // File upload method (for FormData)
+  async upload(endpoint, formData) {
+    const url = `${this.baseURL}${endpoint}`;
+    const token = this.getToken();
+    
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    // Note: Don't set Content-Type for FormData, browser will set it with boundary
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Upload Error:', error);
+      throw error;
+    }
+  }
+
+  // Get full media URL from relative path
+  getMediaUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const host = this.baseURL.replace('/api/v1', '');
+    return `${host}${path.startsWith('/') ? '' : '/'}${path}`;
+  }
 }
 
 // Export singleton instance

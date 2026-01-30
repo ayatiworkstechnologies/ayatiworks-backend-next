@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardBody, StatusBadge } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatusBadge, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
@@ -168,18 +168,17 @@ export default function DepartmentsPage() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Departments</h1>
-          <p className="text-muted-foreground mt-1">Manage company departments and organizational structure</p>
-        </div>
+      <PageHeader
+        title="Departments"
+        description="Manage company departments and organizational structure"
+      >
         {isAdmin && (
           <Button variant="primary" onClick={() => openModal()} className="shadow-lg shadow-primary/20">
             <HiOutlinePlus className="w-5 h-5" />
             Add Department
           </Button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Search Bar */}
       <Card>

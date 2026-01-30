@@ -227,7 +227,6 @@ export default function ApplyLeavePage() {
                   value={formData.from_date}
                   onChange={handleChange}
                   className={`input ${errors.from_date ? 'input-error' : ''}`}
-                  min={new Date().toISOString().split('T')[0]}
                 />
                 {errors.from_date && <p className="error-message">{errors.from_date}</p>}
               </div>
@@ -239,7 +238,7 @@ export default function ApplyLeavePage() {
                   value={formData.to_date}
                   onChange={handleChange}
                   className={`input ${errors.to_date ? 'input-error' : ''}`}
-                  min={formData.from_date || new Date().toISOString().split('T')[0]}
+                  min={formData.from_date || ''}
                 />
                 {errors.to_date && <p className="error-message">{errors.to_date}</p>}
               </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardHeader, CardBody, StatusBadge, Avatar } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatusBadge, Avatar, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
@@ -180,15 +180,12 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-8 animate-fade-in-up h-full flex flex-col">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Tasks</h1>
-          <p className="text-muted-foreground mt-1">
-            {isAdminOrManager
-              ? (viewMode === 'all' ? 'Viewing all tasks across the organization' : 'Viewing only your assigned tasks')
-              : 'Manage and track your assigned tasks'}
-          </p>
-        </div>
+      <PageHeader
+        title="Tasks"
+        description={isAdminOrManager
+          ? (viewMode === 'all' ? 'Viewing all tasks across the organization' : 'Viewing only your assigned tasks')
+          : 'Manage and track your assigned tasks'}
+      >
         <div className="flex items-center gap-3 flex-wrap">
           {/* View Mode Toggle - Only for Admins */}
           {isAdminOrManager && (
@@ -244,7 +241,7 @@ export default function TasksPage() {
             </Button>
           )}
         </div>
-      </div>
+      </PageHeader>
 
 
       {/* Task Stats Banner */}

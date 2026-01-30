@@ -6,7 +6,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card, CardHeader, CardBody, StatusBadge, StatCard } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatusBadge, StatCard, PageHeader } from '@/components/ui';
 import { QuickActionsGrid, RecentActivityWidget, StatsGrid } from './DashboardWidgets';
 import { useDashboardStats, useRecentActivity, useQuickActions } from '@/hooks/useDashboardData';
 import { useTodayAttendance } from '@/hooks/useAPI';
@@ -60,14 +60,11 @@ export default function EmployeeDashboard({ user }) {
     return (
         <div className="space-y-8">
             {/* Welcome Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                        Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {user?.first_name || 'User'}!
-                    </h1>
-                    <p className="text-muted-foreground mt-1">Here's your workspace overview</p>
-                </div>
-
+            {/* Welcome Section */}
+            <PageHeader
+                title={`Good ${new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, ${user?.first_name || 'User'}!`}
+                description="Here's your workspace overview"
+            >
                 {/* Attendance Widget */}
                 <Card className="md:w-auto">
                     <CardBody className="flex items-center gap-4 p-4">
@@ -85,7 +82,7 @@ export default function EmployeeDashboard({ user }) {
                         </div>
                     </CardBody>
                 </Card>
-            </div>
+            </PageHeader>
 
             {/* Stats Grid */}
             <StatsGrid stats={stats} loading={statsLoading} />

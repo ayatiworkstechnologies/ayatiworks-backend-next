@@ -1,10 +1,12 @@
 'use client';
 
-export default function Avatar({ 
-  src, 
-  name, 
+import api from '@/lib/api';
+
+export default function Avatar({
+  src,
+  name,
   size = 'md',
-  className = '' 
+  className = ''
 }) {
   const sizes = {
     sm: 'avatar-sm',
@@ -26,7 +28,7 @@ export default function Avatar({
   return (
     <div className={`avatar ${sizes[size]} ${className}`}>
       {src ? (
-        <img src={src} alt={name || 'Avatar'} />
+        <img src={api.getMediaUrl(src)} alt={name || 'Avatar'} />
       ) : (
         <span>{getInitials(name)}</span>
       )}

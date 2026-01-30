@@ -6,7 +6,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card, CardHeader, CardBody, StatusBadge } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatusBadge, PageHeader } from '@/components/ui';
 import { QuickActionsGrid, RecentActivityWidget, StatsGrid } from './DashboardWidgets';
 import { useDashboardStats, useRecentActivity, useQuickActions } from '@/hooks/useDashboardData';
 import {
@@ -58,14 +58,10 @@ export default function AdminDashboard({ user }) {
     return (
         <div className="space-y-8">
             {/* Welcome Section */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                    Admin Dashboard
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                    Manage your organization and oversee all operations
-                </p>
-            </div>
+            <PageHeader
+                title="Admin Dashboard"
+                description="Manage your organization and oversee all operations"
+            />
 
             {/* Stats Grid */}
             <StatsGrid stats={stats} loading={statsLoading} />

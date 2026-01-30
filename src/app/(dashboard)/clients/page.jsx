@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -38,11 +38,10 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-8 animate-fade-in-up">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Clients</h1>
-          <p className="text-muted-foreground mt-1">Manage your client relationships</p>
-        </div>
+      <PageHeader
+        title="Clients"
+        description="Manage your client relationships"
+      >
         {['admin', 'manager', 'super_admin'].includes(user?.role?.code?.toLowerCase()) && (
           <Link href="/clients/new">
             <Button variant="primary" className="shadow-lg shadow-primary/20">
@@ -50,7 +49,7 @@ export default function ClientsPage() {
             </Button>
           </Link>
         )}
-      </div>
+      </PageHeader>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,33 +1,33 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardHeader, CardBody, Avatar } from '@/components/ui';
+import Link from 'next/link';
+import { Card, CardHeader, CardBody, Avatar, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import api from '@/lib/api';
-import Link from 'next/link';
 import {
-  HiOutlineUser, HiOutlineShieldCheck, HiOutlineBell, HiOutlineMoon,
-  HiOutlineCamera, HiOutlineMail, HiOutlinePhone, HiOutlineKey,
-  HiOutlineDeviceMobile, HiOutlineCheck, HiOutlineSun, HiOutlineOfficeBuilding,
-  HiOutlineBadgeCheck, HiOutlineUserGroup, HiOutlineChevronRight, HiOutlineCog,
-  HiOutlineCheckCircle, HiOutlineLocationMarker, HiOutlineCollection,
-  HiOutlineIdentification, HiOutlineLockClosed, HiOutlineUserCircle
+  HiOutlineUser, HiOutlineShieldCheck, HiOutlineBell, HiOutlineMoon, HiOutlineSun,
+  HiOutlineOfficeBuilding, HiOutlineLocationMarker, HiOutlineCollection, HiOutlineIdentification,
+  HiOutlineUserGroup, HiOutlineUserCircle, HiOutlineLockClosed, HiOutlineBadgeCheck, HiOutlineChevronRight,
+  HiOutlineCamera, HiOutlineMail, HiOutlinePhone, HiOutlineCheck, HiOutlineKey, HiOutlineDeviceMobile,
+  HiOutlineCheckCircle
 } from 'react-icons/hi';
 
-// Role constants for comparisons
-const ADMIN_ROLES = ['Super Admin', 'SUPER_ADMIN', 'Admin', 'ADMIN'];
-const MANAGEMENT_ROLES = ['Super Admin', 'SUPER_ADMIN', 'Admin', 'ADMIN', 'Manager', 'MANAGER', 'HR Manager', 'HR'];
-const HR_ROLES = ['Super Admin', 'SUPER_ADMIN', 'Admin', 'ADMIN', 'HR Manager', 'HR'];
+// Role group constants
+const ADMIN_ROLES = ['Super Admin', 'Admin', 'SUPER_ADMIN', 'ADMIN'];
+const MANAGEMENT_ROLES = ['Manager', 'MANAGER'];
+const HR_ROLES = ['HR Manager', 'HR', 'HR_MANAGER'];
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('profile');
-  const [darkMode, setDarkMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   // Profile form state
   const [profileData, setProfileData] = useState({
@@ -172,15 +172,10 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-12 h-12 rounded-xl bg-gray-500/10 flex items-center justify-center">
-          <HiOutlineCog className="w-6 h-6 text-gray-600" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
-          <p className="text-muted-foreground">Manage your account preferences and system configurations</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Manage your account preferences and system configurations"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Sidebar Tabs */}
@@ -484,32 +479,29 @@ export default function SettingsPage() {
               <CardBody className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button
-                    className={`group relative p-4 rounded-xl border-2 transition-all ${!darkMode ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border hover:border-border/80'}`}
-                    onClick={() => setDarkMode(false)}
+                    className={`group relative p-4 rounded-xl border-2 transition-all ${theme === 'light' ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border hover:border-border/80'}`}
+                    onClick={() => theme === 'dark' && toggleTheme()}
                   >
                     <div className="flex items-center gap-3 mb-3">
                       <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><HiOutlineSun className="w-5 h-5" /></div>
                       <span className="font-bold text-foreground">Light Mode</span>
                     </div>
                     <div className="h-20 bg-gray-100 rounded-lg w-full border border-gray-200"></div>
-                    {!darkMode && (
+                    {theme === 'light' && (
                       <div className="absolute top-4 right-4 text-primary"><HiOutlineCheckCircle className="w-6 h-6" /></div>
                     )}
                   </button>
 
                   <button
-                    className={`group relative p-4 rounded-xl border-2 transition-all ${darkMode ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border hover:border-border/80'}`}
-                    onClick={() => {
-                      setDarkMode(true);
-                      toast.info('Dark mode support coming soon');
-                    }}
+                    className={`group relative p-4 rounded-xl border-2 transition-all ${theme === 'dark' ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-border hover:border-border/80'}`}
+                    onClick={() => theme === 'light' && toggleTheme()}
                   >
                     <div className="flex items-center gap-3 mb-3">
                       <div className="p-2 bg-gray-800 text-yellow-400 rounded-lg"><HiOutlineMoon className="w-5 h-5" /></div>
                       <span className="font-bold text-foreground">Dark Mode</span>
                     </div>
                     <div className="h-20 bg-gray-900 rounded-lg w-full border border-gray-700"></div>
-                    {darkMode && (
+                    {theme === 'dark' && (
                       <div className="absolute top-4 right-4 text-primary"><HiOutlineCheckCircle className="w-6 h-6" /></div>
                     )}
                   </button>

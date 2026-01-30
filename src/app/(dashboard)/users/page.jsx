@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import PermissionGuard from '@/components/PermissionGuard';
 import api from '@/lib/api';
@@ -41,7 +41,7 @@ function UsersPageContent() {
         fetchData();
     }, []);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             const [usersRes, rolesRes] = await Promise.all([
@@ -56,9 +56,9 @@ function UsersPageContent() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
 
-    const openCreateModal = () => {
+    const openCreateModal = useCallback(() => {
         setEditingUser(null);
         setFormData({
             email: '',
@@ -69,9 +69,9 @@ function UsersPageContent() {
             role_id: null
         });
         setShowModal(true);
-    };
+    }, []);
 
-    const openEditModal = (user) => {
+    const openEditModal = useCallback((user) => {
         setEditingUser(user);
         setFormData({
             email: user.email,
@@ -82,9 +82,9 @@ function UsersPageContent() {
             password: '' // Don't include password when editing
         });
         setShowModal(true);
-    };
+    }, []);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = useCallback(async (e) => {
         e.preventDefault();
 
         if (!formData.email || !formData.first_name) {
@@ -122,9 +122,9 @@ function UsersPageContent() {
         } finally {
             setSaving(false);
         }
-    };
+    }, [formData, editingUser, toast, fetchData]);
 
-    const handleDelete = async () => {
+    const handleDelete = useCallback(async () => {
         if (!deleteModal.user) return;
 
         setDeleting(true);
@@ -138,9 +138,9 @@ function UsersPageContent() {
         } finally {
             setDeleting(false);
         }
-    };
+    }, [deleteModal.user, toast, fetchData]);
 
-    const toggleUserStatus = async (user) => {
+    const toggleUserStatus = useCallback(async (user) => {
         try {
             const endpoint = user.is_active ? 'deactivate' : 'activate';
             await api.patch(`/users/${user.id}/${endpoint}`);
@@ -149,9 +149,9 @@ function UsersPageContent() {
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Failed to update user status');
         }
-    };
+    }, [toast, fetchData]);
 
-    const verifyUser = async (userId) => {
+    const verifyUser = useCallback(async (userId) => {
         try {
             await api.patch(`/users/${userId}/verify`);
             toast.success('User verified successfully');
@@ -159,7 +159,7 @@ function UsersPageContent() {
         } catch (error) {
             toast.error('Failed to verify user');
         }
-    };
+    }, [toast, fetchData]);
 
     // Filter users based on search
     const filteredUsers = users.filter(user =>

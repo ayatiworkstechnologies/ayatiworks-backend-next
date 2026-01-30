@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import api from '@/lib/api';
@@ -224,12 +224,11 @@ export default function AttendancePage() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Header & Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Attendance</h1>
-          <p className="text-muted-foreground mt-1">Track your work hours and attendance history</p>
-        </div>
-        {/* Tabs for Admin */}
+      {/* Header & Tabs */}
+      <PageHeader
+        title="Attendance"
+        description="Track your work hours and attendance history"
+      >
         {isAdmin && (
           <div className="flex bg-muted/50 p-1 rounded-lg">
             <button
@@ -246,7 +245,7 @@ export default function AttendancePage() {
             </button>
           </div>
         )}
-      </div>
+      </PageHeader>
 
       {/* My Attendance Tab */}
       {activeTab === 'my_attendance' && (

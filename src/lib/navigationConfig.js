@@ -17,6 +17,7 @@ import {
   HiOutlineCog,
   HiOutlineShieldCheck,
   HiOutlineBell,
+  HiOutlineDocumentText,
 } from 'react-icons/hi';
 
 /**
@@ -34,6 +35,12 @@ export const navigationContext = [
         permission: 'dashboard.view',
       },
       {
+        title: 'My Profile',
+        href: '/profile',
+        iconComponent: HiOutlineUsers,
+        permission: 'employee.view',
+      },
+      {
         title: 'Notifications',
         href: '/notifications',
         iconComponent: HiOutlineBell,
@@ -47,13 +54,24 @@ export const navigationContext = [
         title: 'Applications',
         href: '/applications',
         iconComponent: HiOutlineBriefcase,
-        anyRole: ['Super Admin', 'Admin', 'HR', 'Manager'],
+        anyRole: ['Super Admin', 'Admin', 'HR Manager', 'Manager'],
       },
       {
         title: 'Enquiries',
         href: '/enquiries',
         iconComponent: HiOutlineClipboardList,
-        anyRole: ['Super Admin', 'Admin', 'HR', 'Manager'],
+        anyRole: ['Super Admin', 'Admin', 'HR Manager', 'Manager'],
+      },
+    ]
+  },
+  {
+    group: 'Content',
+    items: [
+      {
+        title: 'Blogs',
+        href: '/blogs',
+        iconComponent: HiOutlineDocumentText,
+        anyRole: ['Super Admin', 'Admin', 'Manager'],
       },
     ]
   },
@@ -65,6 +83,12 @@ export const navigationContext = [
         href: '/employees',
         iconComponent: HiOutlineUsers,
         permission: 'employee.view_all',
+      },
+      {
+        title: 'Shifts',
+        href: '/shifts',
+        iconComponent: HiOutlineClock,
+        permission: 'shift.view',
       },
       {
         title: 'Attendance',
@@ -87,7 +111,7 @@ export const navigationContext = [
         title: 'Projects',
         href: '/projects',
         iconComponent: HiOutlineFolder,
-        anyPermission: ['project.view', 'project.view_all'],
+        anyPermission: ['project.view', 'project.view_all', 'project.view_own'],
       },
       {
         title: 'Tasks',
@@ -95,16 +119,51 @@ export const navigationContext = [
         iconComponent: HiOutlineClipboardList,
         anyPermission: ['task.view', 'task.view_all'],
       },
+      {
+        title: 'Teams',
+        href: '/teams',
+        iconComponent: HiOutlineUserGroup,
+        permission: 'team.view',
+      },
     ]
   },
   {
-    group: 'Finance',
+    group: 'CRM',
     items: [
       {
         title: 'Clients',
         href: '/clients',
         iconComponent: HiOutlineBriefcase,
         anyPermission: ['client.view', 'client.view_own'],
+      },
+      {
+        title: 'Leads',
+        href: '/leads',
+        iconComponent: HiOutlineUserGroup,
+        permission: 'lead.view',
+      },
+      {
+        title: 'Meta Ads',
+        href: '/meta-ads',
+        iconComponent: HiOutlineChartBar,
+        permission: 'meta.view',
+      },
+    ]
+  },
+  {
+    group: 'Finance',
+    items: [
+      {
+        title: 'Payroll',
+        href: '/payroll',
+        iconComponent: HiOutlineCurrencyDollar,
+        anyPermission: ['payroll.view', 'payroll.view_all'],
+      },
+      {
+        title: 'Invoices',
+        href: '/invoices',
+        iconComponent: HiOutlineCurrencyDollar,
+        anyPermission: ['invoice.view', 'invoice.view_own'],
       },
     ]
   },
@@ -140,12 +199,6 @@ export const navigationContext = [
         href: '/designations',
         iconComponent: HiOutlineBadgeCheck,
         permission: 'designation.view',
-      },
-      {
-        title: 'Teams',
-        href: '/teams',
-        iconComponent: HiOutlineUserGroup,
-        permission: 'team.view',
       },
     ]
   },

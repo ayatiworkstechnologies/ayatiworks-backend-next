@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import api from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
@@ -222,17 +222,16 @@ export default function LeavesPage() {
 
   return (
     <div className="space-y-8 animate-fade-in-up">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Leave Management</h1>
-          <p className="text-muted-foreground mt-1">Apply for leaves and track balance</p>
-        </div>
+      <PageHeader
+        title="Leave Management"
+        description="Apply for leaves and track balance"
+      >
         <Link href="/leaves/apply">
           <Button variant="primary" className="shadow-lg shadow-primary/20">
             <HiOutlinePlus className="w-5 h-5" /> Apply Leave
           </Button>
         </Link>
-      </div>
+      </PageHeader>
 
       {/* Leave Balance Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

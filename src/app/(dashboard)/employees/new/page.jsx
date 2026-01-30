@@ -21,6 +21,7 @@ export default function CreateEmployeePage() {
   const [designations, setDesignations] = useState([]);
   const [roles, setRoles] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [filteredDesignations, setFilteredDesignations] = useState([]);
 
   const [formData, setFormData] = useState({
     // Essential fields only
@@ -57,6 +58,18 @@ export default function CreateEmployeePage() {
       console.error('Error fetching dropdown data:', error);
     }
   };
+
+  // Filter designations when department changes
+  useEffect(() => {
+    if (formData.department_id) {
+      const filtered = designations.filter(d =>
+        !d.department_id || d.department_id === parseInt(formData.department_id)
+      );
+      setFilteredDesignations(filtered);
+    } else {
+      setFilteredDesignations(designations);
+    }
+  }, [formData.department_id, designations]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -226,7 +239,7 @@ export default function CreateEmployeePage() {
                   className={`input ${errors.designation_id ? 'input-error' : ''}`}
                 >
                   <option value="">Select Designation</option>
-                  {designations.map(d => (
+                  {filteredDesignations.map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>

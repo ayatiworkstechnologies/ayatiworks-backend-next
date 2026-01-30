@@ -19,6 +19,8 @@ export default function EditEmployeePage() {
   const [errors, setErrors] = useState({});
   const [departments, setDepartments] = useState([]);
   const [designations, setDesignations] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [filteredDesignations, setFilteredDesignations] = useState([]);
 
   const [formData, setFormData] = useState({
     // Personal Info (from EmployeeBase)
@@ -76,14 +78,16 @@ export default function EditEmployeePage() {
 
   const fetchData = async () => {
     try {
-      const [empData, deptRes, desigRes] = await Promise.all([
+      const [empData, deptRes, desigRes, empListRes] = await Promise.all([
         api.get(`/employees/${id}`),
         api.get('/organizations/departments').catch(() => ({ items: [] })),
         api.get('/organizations/designations').catch(() => ({ items: [] })),
+        api.get('/employees?page_size=100').catch(() => ({ items: [] })),
       ]);
 
       setDepartments(deptRes.items || deptRes || []);
       setDesignations(desigRes.items || desigRes || []);
+      setEmployees(empListRes.items || empListRes || []);
 
       // Set user info (display only)
       setUserInfo({
@@ -137,12 +141,30 @@ export default function EditEmployeePage() {
     }
   };
 
+  useEffect(() => {
+    if (formData.department_id) {
+      const filtered = designations.filter(d =>
+        !d.department_id || d.department_id === parseInt(formData.department_id)
+      );
+      setFilteredDesignations(filtered);
+    } else {
+      setFilteredDesignations(designations);
+    }
+  }, [formData.department_id, designations]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+
+    // Reset designation if department changes and current designation is invalid
+    if (name === 'department_id') {
+      // Logic handled by useEffect, but might want to clear designation if needed
+      // setFormData(prev => ({ ...prev, designation_id: '' })); 
+    }
+
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
 
@@ -297,12 +319,23 @@ export default function EditEmployeePage() {
                 </select>
               </div>
               <div className="input-wrapper">
-                <label className="input-label">Designation</label>
+                <label className="input-label">Select Designation</label>
                 <select name="designation_id" value={formData.designation_id} onChange={handleChange} className="input">
                   <option value="">Select Designation</option>
-                  {designations.map(desig => (
+                  {filteredDesignations.map(desig => (
                     <option key={desig.id} value={desig.id}>{desig.name}</option>
                   ))}
+                </select>
+              </div>
+              <div className="input-wrapper">
+                <label className="input-label">Reporting Manager</label>
+                <select name="manager_id" value={formData.manager_id} onChange={handleChange} className="input">
+                  <option value="">Select Manager</option>
+                  {employees
+                    .filter(e => e.id !== parseInt(id))
+                    .map(e => (
+                      <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>
+                    ))}
                 </select>
               </div>
             </div>

@@ -6,7 +6,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card, CardHeader, CardBody, StatusBadge } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatusBadge, PageHeader } from '@/components/ui';
 import { QuickActionsGrid, RecentActivityWidget, StatsGrid } from './DashboardWidgets';
 import { useDashboardStats, useRecentActivity, useQuickActions } from '@/hooks/useDashboardData';
 import {
@@ -58,14 +58,10 @@ export default function ClientDashboard({ user }) {
     return (
         <div className="space-y-8">
             {/* Welcome Section */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                    Welcome back, {user?.first_name || 'Client'}!
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                    Track your projects, invoices, and view updates
-                </p>
-            </div>
+            <PageHeader
+                title={`Welcome back, ${user?.first_name || 'Client'}!`}
+                description="Track your projects, invoices, and view updates"
+            />
 
             {/* Stats Grid */}
             <StatsGrid stats={stats} loading={statsLoading} />

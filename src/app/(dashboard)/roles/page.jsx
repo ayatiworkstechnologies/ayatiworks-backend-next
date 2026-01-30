@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import PermissionGuard from '@/components/PermissionGuard';
-import { Card, CardBody } from '@/components/ui';
+import { Card, CardBody, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
@@ -237,18 +237,16 @@ function RolesPageContent() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Roles & Permissions</h1>
-          <p className="text-muted-foreground mt-1">Manage user roles and their associated permissions</p>
-        </div>
-
+      <PageHeader
+        title="Roles & Permissions"
+        description="Manage user roles and their associated permissions"
+      >
         <PermissionGuard anyPermission={['role.create', 'super_admin']}>
           <Button variant="primary" onClick={() => openModal()} className="shadow-lg shadow-primary/20">
             <HiOutlinePlus className="w-5 h-5" /> Create Role
           </Button>
         </PermissionGuard>
-      </div>
+      </PageHeader>
 
       {/* Roles Grid */}
       {loading ? (

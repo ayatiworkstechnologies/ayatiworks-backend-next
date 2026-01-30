@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
 import api from '@/lib/api';
@@ -38,7 +38,7 @@ export default function EmployeesPage() {
     fetchEmployees();
   }, [page, search, selectedDept, selectedStatus]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const [deptRes, desigRes, overviewRes] = await Promise.all([
         api.get('/organizations/departments').catch(() => ({ items: [] })),
@@ -57,9 +57,9 @@ export default function EmployeesPage() {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, []);
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -79,13 +79,13 @@ export default function EmployeesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, selectedDept, selectedStatus]);
 
-  const handleDelete = (employee) => {
+  const handleDelete = useCallback((employee) => {
     setDeleteModal({ open: true, employee });
-  };
+  }, []);
 
-  const confirmDelete = async () => {
+  const confirmDelete = useCallback(async () => {
     if (!deleteModal.employee) return;
 
     setDeleting(true);
@@ -100,15 +100,14 @@ export default function EmployeesPage() {
     } finally {
       setDeleting(false);
     }
-  };
+  }, [deleteModal.employee, toast, fetchEmployees]);
 
   return (
     <div className="space-y-8 animate-fade-in-up">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Employees</h1>
-          <p className="text-muted-foreground mt-1">Manage your team members</p>
-        </div>
+      <PageHeader
+        title="Employees"
+        description="Manage your team members"
+      >
         {user?.role?.code?.toLowerCase() !== 'employee' && (
           <Link href="/employees/new">
             <Button variant="primary" className="shadow-lg shadow-primary/20">
@@ -116,7 +115,7 @@ export default function EmployeesPage() {
             </Button>
           </Link>
         )}
-      </div>
+      </PageHeader>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

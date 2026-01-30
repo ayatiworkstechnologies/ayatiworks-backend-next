@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
 import api from '@/lib/api';
@@ -58,26 +58,9 @@ export default function ClientDetailPage() {
     try {
       const data = await api.get(`/clients/${id}`);
       setClient(data);
-    } catch (error) {
-      // Mock data fallbacks if API fails for demo
-      setClient({
-        id: 1, name: 'ABC Corporation', email: 'contact@abc.com', phone: '+1 234 567 8900', website: 'https://abc.com',
-        industry: 'Technology', status: 'active', address: '123 Tech Park, Silicon Valley, CA 94000',
-        description: 'Leading technology company specializing in enterprise solutions.',
-        contacts: [
-          { id: 1, name: 'John CEO', email: 'john@abc.com', phone: '+1 234 567 8901', designation: 'CEO', is_primary: true },
-          { id: 2, name: 'Sarah PM', email: 'sarah@abc.com', phone: '+1 234 567 8902', designation: 'Project Manager', is_primary: false },
-        ],
-        projects: [
-          { id: 1, name: 'HRMS Platform', status: 'in_progress', value: 50000 },
-          { id: 2, name: 'E-Commerce Website', status: 'completed', value: 25000 },
-        ],
-        invoices: [
-          { id: 1, number: 'INV-001', amount: 15000, status: 'paid', date: '2026-01-15' },
-          { id: 2, number: 'INV-002', amount: 8500, status: 'sent', date: '2026-01-10' },
-        ],
-        totalRevenue: 75000, totalProjects: 3,
-      });
+      setClient(null);
+      toast.error('Failed to load client details');
+      router.push('/clients');
     } finally {
       setLoading(false);
     }
@@ -123,26 +106,17 @@ export default function ClientDetailPage() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Page Header */}
-      <div className="page-header sticky top-0 bg-background/95 backdrop-blur-sm z-20 py-4 border-b border-border/50 mb-0">
-        <div>
-          <button onClick={() => router.back()} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors mb-2">
-            <HiOutlineArrowLeft className="w-4 h-4" /> Back to Clients
-          </button>
-          <div className="flex items-center gap-4">
-            <Avatar name={client.name} size="lg" className="ring-2 ring-background shadow-lg" />
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-foreground">{client.name}</h1>
-                <StatusBadge status={client.status} />
-              </div>
-              <p className="text-muted-foreground text-sm flex items-center gap-2 mt-1">
-                <HiOutlineOfficeBuilding className="w-4 h-4" />
-                {client.industry}
-              </p>
-            </div>
-          </div>
-        </div>
-
+      <PageHeader
+        title={client.name}
+        description={
+          <span className="flex items-center gap-2">
+            <HiOutlineOfficeBuilding className="w-4 h-4" />
+            {client.industry}
+          </span>
+        }
+        backLink="/clients"
+        backText="Back to Clients"
+      >
         <div className="flex gap-2">
           {['admin', 'manager', 'super_admin'].includes(user?.role?.code?.toLowerCase()) && (
             <>
@@ -160,7 +134,7 @@ export default function ClientDetailPage() {
             </>
           )}
         </div>
-      </div>
+      </PageHeader>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardBody, StatCard, StatusBadge } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatCard, StatusBadge, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
 import api from '@/lib/api';
@@ -134,11 +134,10 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-8 animate-fade-in-up">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Projects</h1>
-          <p className="text-muted-foreground mt-1">Manage your projects and track progress</p>
-        </div>
+      <PageHeader
+        title="Projects"
+        description="Manage your projects and track progress"
+      >
         <div className="flex items-center gap-3">
           <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl border border-border/50 shadow-sm">
             <button
@@ -154,15 +153,15 @@ export default function ProjectsPage() {
               <HiOutlineViewList className="w-5 h-5" />
             </button>
           </div>
+          {isAdmin && (
+            <Link href="/projects/new">
+              <Button variant="primary" className="shadow-lg shadow-primary/20">
+                <HiOutlinePlus className="w-5 h-5" /> New Project
+              </Button>
+            </Link>
+          )}
         </div>
-        {isAdmin && (
-          <Link href="/projects/new">
-            <Button variant="primary" className="shadow-lg shadow-primary/20">
-              <HiOutlinePlus className="w-5 h-5" /> New Project
-            </Button>
-          </Link>
-        )}
-      </div>
+      </PageHeader>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

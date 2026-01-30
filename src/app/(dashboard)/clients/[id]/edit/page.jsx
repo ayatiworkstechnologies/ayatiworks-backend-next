@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardHeader, CardBody } from '@/components/ui';
+import { Card, CardHeader, CardBody, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import api from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
@@ -79,14 +79,12 @@ export default function EditClientPage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="page-header">
-        <div>
-          <Link href={`/clients/${id}`} className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700">
-            <HiOutlineArrowLeft className="w-4 h-4" /> Back to Client
-          </Link>
-          <h1 className="page-title mt-2">Edit Client</h1>
-        </div>
-      </div>
+      <PageHeader
+        title="Edit Client"
+        description={`Update details for ${formData.name || 'client'}`}
+        backLink={`/clients/${id}`}
+        backText="Back to Client"
+      />
 
       <form onSubmit={handleSubmit}>
         <Card className="mb-6">

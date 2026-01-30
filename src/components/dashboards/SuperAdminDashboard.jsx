@@ -6,7 +6,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Card, CardHeader, CardBody, StatusBadge } from '@/components/ui';
+import { Card, CardHeader, CardBody, StatusBadge, PageHeader } from '@/components/ui';
 import { QuickActionsGrid, RecentActivityWidget, StatsGrid } from './DashboardWidgets';
 import { useDashboardStats, useRecentActivity, useQuickActions } from '@/hooks/useDashboardData';
 import {
@@ -58,14 +58,10 @@ export default function SuperAdminDashboard({ user }) {
     return (
         <div className="space-y-8">
             {/* Welcome Section */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                    Super Admin Dashboard
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                    Complete system overview and administration
-                </p>
-            </div>
+            <PageHeader
+                title="Super Admin Dashboard"
+                description="Complete system overview and administration"
+            />
 
             {/* Stats Grid */}
             <StatsGrid stats={stats} loading={statsLoading} />

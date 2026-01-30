@@ -21,6 +21,7 @@ export default function Button({
   };
 
   const sizes = {
+    xs: 'btn-xs',
     sm: 'btn-sm',
     md: '',
     lg: 'btn-lg',
