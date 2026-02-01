@@ -114,4 +114,71 @@ export const ListItemSkeleton = () => {
     );
 };
 
+/**
+ * Avatar Skeleton - for user avatar loading states
+ */
+export const AvatarSkeleton = ({ size = 'md' }) => {
+    const sizes = {
+        sm: '32px',
+        md: '40px',
+        lg: '56px',
+        xl: '80px',
+    };
+    const dimension = sizes[size] || sizes.md;
+    return <Skeleton variant="circular" width={dimension} height={dimension} />;
+};
+
+/**
+ * Form Skeleton - for form loading states
+ */
+export const FormSkeleton = ({ fields = 4 }) => {
+    return (
+        <div className="space-y-6">
+            {Array(fields).fill(0).map((_, i) => (
+                <div key={i} className="space-y-2">
+                    <Skeleton height="16px" width="120px" />
+                    <Skeleton height="40px" width="100%" />
+                </div>
+            ))}
+            <div className="flex gap-3 pt-4">
+                <Skeleton height="40px" width="100px" />
+                <Skeleton height="40px" width="100px" />
+            </div>
+        </div>
+    );
+};
+
+/**
+ * Page Header Skeleton - for page header loading states
+ */
+export const PageHeaderSkeleton = () => {
+    return (
+        <div className="flex items-center justify-between mb-8">
+            <div className="space-y-2">
+                <Skeleton height="32px" width="200px" />
+                <Skeleton height="16px" width="300px" />
+            </div>
+            <Skeleton height="40px" width="140px" />
+        </div>
+    );
+};
+
+/**
+ * Dashboard Skeleton - full page dashboard loading
+ */
+export const DashboardSkeleton = () => {
+    return (
+        <div className="space-y-8">
+            <PageHeaderSkeleton />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => <StatCardSkeleton key={i} />)}
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <CardSkeleton />
+                <CardSkeleton />
+            </div>
+        </div>
+    );
+};
+
 export default Skeleton;

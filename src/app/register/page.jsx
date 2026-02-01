@@ -60,9 +60,9 @@ export default function RegisterPage() {
       <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4 shadow-lg">E</div>
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4 shadow-lg">A</div>
             <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
-            <p className="text-gray-600 mt-2">Get started with Enterprise HRMS</p>
+            <p className="text-gray-600 mt-2">Get started with Ayatiworks</p>
           </div>
 
           <Card>
@@ -127,7 +127,7 @@ export default function RegisterPage() {
       <div className="hidden lg:flex flex-1 bg-gradient-to-br from-blue-600 to-blue-800 p-12 items-center justify-center">
         <div className="max-w-lg text-white">
           <h2 className="text-4xl font-bold mb-6">Streamline Your Workforce Management</h2>
-          <p className="text-lg opacity-90 mb-8">Join thousands of companies using Enterprise HRMS to manage employees, track attendance, handle leaves, and boost productivity.</p>
+          <p className="text-lg opacity-90 mb-8">Join thousands of companies using Ayatiworks to manage employees, track attendance, handle leaves, and boost productivity.</p>
           <div className="grid grid-cols-2 gap-6">
             <div className="bg-white/10 p-4 rounded-xl backdrop-blur">
               <HiOutlineUsers className="w-8 h-8 mb-2" /><div className="font-semibold">Employee Management</div><p className="text-sm opacity-75">Complete employee lifecycle</p>

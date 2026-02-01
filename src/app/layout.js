@@ -21,24 +21,24 @@ const outfit = Outfit({
 export const metadata = {
   metadataBase: new URL('http://localhost:3000'),
   title: {
-    default: 'Enterprise HRMS | Employee Management System',
-    template: '%s | Enterprise HRMS'
+    default: 'Ayatiworks | Employee Management System',
+    template: '%s | Ayatiworks'
   },
-  description: 'Comprehensive HR management, attendance tracking, project management, and CRM platform for modern enterprises',
-  keywords: ['HRMS', 'HR Management', 'Employee Management', 'Attendance Tracking', 'Project Management', 'CRM', 'Enterprise Software'],
-  authors: [{ name: 'Enterprise HRMS Team' }],
-  creator: 'Enterprise HRMS',
-  publisher: 'Enterprise HRMS',
+  description: 'Comprehensive HR management, attendance tracking, project management, and CRM platform for modern businesses',
+  keywords: ['HRMS', 'HR Management', 'Employee Management', 'Attendance Tracking', 'Project Management', 'CRM', 'Ayatiworks'],
+  authors: [{ name: 'Ayatiworks Team' }],
+  creator: 'Ayatiworks',
+  publisher: 'Ayatiworks',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   openGraph: {
-    title: 'Enterprise HRMS | Employee Management System',
+    title: 'Ayatiworks | Employee Management System',
     description: 'Comprehensive HR management, attendance tracking, project management, and CRM platform',
     url: 'http://localhost:3000',
-    siteName: 'Enterprise HRMS',
+    siteName: 'Ayatiworks',
     locale: 'en_US',
     type: 'website',
     images: [
@@ -46,16 +46,16 @@ export const metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Enterprise HRMS Dashboard',
+        alt: 'Ayatiworks Dashboard',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Enterprise HRMS | Employee Management System',
-    description: 'Comprehensive HR management platform for modern enterprises',
+    title: 'Ayatiworks | Employee Management System',
+    description: 'Comprehensive HR management platform for modern businesses',
     images: ['/og-image.png'],
-    creator: '@enterprisehrms',
+    creator: '@ayatiworks',
   },
   robots: {
     index: true,

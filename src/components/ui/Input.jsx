@@ -33,9 +33,14 @@ const Input = forwardRef(({
           type={type}
           placeholder={placeholder}
           disabled={disabled}
-          className={`input ${error ? 'input-error' : ''} ${icon ? '!pl-10' : ''} ${className}`}
+          className={`input ${error ? 'input-error' : ''} ${icon ? '!pl-10' : ''} ${props.suffix ? '!pr-10' : ''} ${className}`}
           {...props}
         />
+        {props.suffix && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+            {props.suffix}
+          </div>
+        )}
       </div>
       {error && <span className="error-message">{error}</span>}
     </div>

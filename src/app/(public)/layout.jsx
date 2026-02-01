@@ -11,10 +11,10 @@ export default function PublicLayout({ children }) {
                     <div className="flex justify-between items-center h-16">
                         <Link href="/" className="flex items-center gap-2">
                             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">E</span>
+                                <span className="text-white font-bold text-lg">A</span>
                             </div>
                             <span className="text-xl font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                                Enterprise HRMS
+                                Ayatiworks
                             </span>
                         </Link>
 
@@ -51,12 +51,12 @@ export default function PublicLayout({ children }) {
                         <div className="col-span-1 md:col-span-2">
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                    <span className="text-white font-bold text-lg">E</span>
+                                    <span className="text-white font-bold text-lg">A</span>
                                 </div>
-                                <span className="text-xl font-semibold text-white">Enterprise HRMS</span>
+                                <span className="text-xl font-semibold text-white">Ayatiworks</span>
                             </div>
                             <p className="text-slate-400 max-w-md">
-                                Modern enterprise solution for HR management, project tracking, and business operations.
+                                Modern business solution for HR management, project tracking, and business operations.
                             </p>
                         </div>
 
@@ -79,7 +79,7 @@ export default function PublicLayout({ children }) {
                     </div>
 
                     <div className="border-t border-slate-800 mt-8 pt-8 text-center text-sm">
-                        © {new Date().getFullYear()} Enterprise HRMS. All rights reserved.
+                        © {new Date().getFullYear()} Ayatiworks. All rights reserved.
                     </div>
                 </div>
             </footer>

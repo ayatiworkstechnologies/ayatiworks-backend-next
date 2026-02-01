@@ -8,7 +8,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { 
+import {
   HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff,
   HiOutlineSun, HiOutlineMoon
 } from 'react-icons/hi';
@@ -92,20 +92,20 @@ export default function LoginPage() {
         <div className="max-w-lg text-primary-foreground relative z-10">
           <div className="flex items-center gap-4 mb-8">
             <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl font-bold font-heading shadow-xl border border-white/10">
-              E
+              A
             </div>
             <div className="h-10 w-px bg-white/20" />
-            <span className="text-sm font-medium tracking-wider uppercase opacity-80">Enterprise Workspace</span>
+            <span className="text-sm font-medium tracking-wider uppercase opacity-80">Ayatiworks Workspace</span>
           </div>
 
           <h1 className="text-5xl font-bold font-heading mb-6 leading-tight">
             Manage your<br />organization with confidence.
           </h1>
           <p className="text-lg opacity-90 mb-10 leading-relaxed font-light">
-            Streamline your HR operations with our comprehensive management platform. 
+            Streamline your HR operations with our comprehensive management platform.
             Track attendance, manage projects, and analyze performance in real-time.
           </p>
-          
+
           <div className="grid grid-cols-2 gap-4">
             {[
               { icon: '👥', label: 'Employee Hub' },
@@ -133,8 +133,8 @@ export default function LoginPage() {
               {step === 'login' ? 'Welcome back' : 'Verify Identity'}
             </h1>
             <p className="text-muted-foreground">
-              {step === 'login' 
-                ? 'Sign in to access your dashboard' 
+              {step === 'login'
+                ? 'Sign in to access your dashboard'
                 : 'Enter the verification code sent to your device'
               }
             </p>
@@ -196,7 +196,7 @@ export default function LoginPage() {
                   <Button type="submit" variant="primary" className="w-full text-base py-6 shadow-lg shadow-primary/25" loading={loading}>
                     Sign In
                   </Button>
-                  
+
                   {/* Sign Up Removed as requested */}
                 </form>
               ) : (
@@ -234,7 +234,7 @@ export default function LoginPage() {
                     Verify Access
                   </Button>
 
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setStep('login')}
                     className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
@@ -245,9 +245,9 @@ export default function LoginPage() {
               )}
             </CardBody>
           </Card>
-          
+
           <p className="mt-8 text-center text-xs text-muted-foreground">
-            © 2026 Enterprise HRMS. Secured by Industry Standard Encryption.
+            © 2026 Ayatiworks. Secured by Industry Standard Encryption.
           </p>
         </div>
       </div>

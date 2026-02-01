@@ -12,7 +12,7 @@ import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
 import {
     HiOutlineUserGroup, HiOutlineMail, HiOutlineShieldCheck, HiOutlineUser,
     HiOutlinePencil, HiOutlineTrash, HiOutlineUserAdd, HiOutlineCheckCircle,
-    HiOutlineXCircle, HiOutlinePhone, HiOutlineSearch
+    HiOutlineXCircle, HiOutlinePhone, HiOutlineSearch, HiOutlineDownload
 } from 'react-icons/hi';
 
 function UsersPageContent() {
@@ -26,6 +26,8 @@ function UsersPageContent() {
     const [deleteModal, setDeleteModal] = useState({ open: false, user: null });
     const [deleting, setDeleting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedUsers, setSelectedUsers] = useState([]);
+    const [bulkLoading, setBulkLoading] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -36,6 +38,13 @@ function UsersPageContent() {
         phone: '',
         role_id: null
     });
+
+    // Filter users based on search - MOVED UP to fix ReferenceError
+    const filteredUsers = users.filter(user =>
+        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     useEffect(() => {
         fetchData();
@@ -161,12 +170,69 @@ function UsersPageContent() {
         }
     }, [toast, fetchData]);
 
-    // Filter users based on search
-    const filteredUsers = users.filter(user =>
-        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Bulk operations
+    const handleSelectAll = useCallback((checked) => {
+        if (checked) {
+            setSelectedUsers(filteredUsers.map(u => u.id));
+        } else {
+            setSelectedUsers([]);
+        }
+    }, [filteredUsers]);
+
+    const handleSelectUser = useCallback((userId, checked) => {
+        if (checked) {
+            setSelectedUsers(prev => [...prev, userId]);
+        } else {
+            setSelectedUsers(prev => prev.filter(id => id !== userId));
+        }
+    }, []);
+
+    const handleBulkDelete = useCallback(async () => {
+        if (selectedUsers.length === 0) return;
+        setBulkLoading(true);
+        try {
+            await api.post('/users/bulk-delete', selectedUsers);
+            toast.success(`${selectedUsers.length} users deleted`);
+            setSelectedUsers([]);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.detail || 'Failed to delete users');
+        } finally {
+            setBulkLoading(false);
+        }
+    }, [selectedUsers, toast, fetchData]);
+
+    const handleBulkActivate = useCallback(async () => {
+        if (selectedUsers.length === 0) return;
+        setBulkLoading(true);
+        try {
+            await api.post('/users/bulk-activate', selectedUsers);
+            toast.success(`${selectedUsers.length} users activated`);
+            setSelectedUsers([]);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.detail || 'Failed to activate users');
+        } finally {
+            setBulkLoading(false);
+        }
+    }, [selectedUsers, toast, fetchData]);
+
+    const handleBulkDeactivate = useCallback(async () => {
+        if (selectedUsers.length === 0) return;
+        setBulkLoading(true);
+        try {
+            await api.post('/users/bulk-deactivate', selectedUsers);
+            toast.success(`${selectedUsers.length} users deactivated`);
+            setSelectedUsers([]);
+            fetchData();
+        } catch (error) {
+            toast.error(error.response?.data?.detail || 'Failed to deactivate users');
+        } finally {
+            setBulkLoading(false);
+        }
+    }, [selectedUsers, toast, fetchData]);
+
+
 
     // Stats
     const stats = {
@@ -215,6 +281,41 @@ function UsersPageContent() {
                     </div>
                 </div>
 
+                {/* Bulk Action Bar */}
+                {selectedUsers.length > 0 && (
+                    <div className="p-3 bg-primary/5 border-b border-border/30 flex items-center gap-4">
+                        <span className="text-sm font-medium text-foreground">
+                            {selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} selected
+                        </span>
+                        <div className="flex gap-2 ml-auto">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleBulkActivate}
+                                disabled={bulkLoading}
+                            >
+                                <HiOutlineCheckCircle className="w-4 h-4" /> Activate
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleBulkDeactivate}
+                                disabled={bulkLoading}
+                            >
+                                <HiOutlineXCircle className="w-4 h-4" /> Deactivate
+                            </Button>
+                            <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={handleBulkDelete}
+                                disabled={bulkLoading}
+                            >
+                                <HiOutlineTrash className="w-4 h-4" /> Delete
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 <div className="table-container border-0 bg-transparent">
                     {loading ? (
                         <div className="p-12 text-center space-y-4">
@@ -230,6 +331,14 @@ function UsersPageContent() {
                         <table className="table">
                             <thead>
                                 <tr>
+                                    <th className="w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                                            onChange={(e) => handleSelectAll(e.target.checked)}
+                                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                                        />
+                                    </th>
                                     <th className="w-[30%]">User</th>
                                     <th>Contact</th>
                                     <th>Role</th>
@@ -240,10 +349,18 @@ function UsersPageContent() {
                             </thead>
                             <tbody>
                                 {filteredUsers.map((user) => (
-                                    <tr key={user.id} className="group hover:bg-muted/20 transition-colors">
+                                    <tr key={user.id} className={`group hover:bg-muted/20 transition-colors ${selectedUsers.includes(user.id) ? 'bg-primary/5' : ''}`}>
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedUsers.includes(user.id)}
+                                                onChange={(e) => handleSelectUser(user.id, e.target.checked)}
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                                            />
+                                        </td>
                                         <td>
                                             <div className="flex items-center gap-3">
-                                                <Avatar name={`${user.first_name} ${user.last_name}`} size="md" className="ring-2 ring-background" />
+                                                <Avatar src={user.avatar} name={`${user.first_name} ${user.last_name}`} size="md" className="ring-2 ring-background" />
                                                 <div>
                                                     <span className="font-semibold text-foreground group-hover:text-primary transition-colors">
                                                         {user.first_name} {user.last_name}

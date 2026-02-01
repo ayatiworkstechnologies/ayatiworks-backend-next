@@ -1,10 +1,10 @@
 'use client';
 
-export default function Badge({ 
-  children, 
+export default function Badge({
+  children,
   variant = 'primary',
   dot = false,
-  className = '' 
+  className = ''
 }) {
   const variants = {
     primary: 'badge-primary',
@@ -17,8 +17,8 @@ export default function Badge({
   return (
     <span className={`badge ${variants[variant]} ${className}`}>
       {dot && (
-        <span 
-          className="w-1.5 h-1.5 rounded-full" 
+        <span
+          className="w-1.5 h-1.5 rounded-full"
           style={{ backgroundColor: 'currentColor' }}
         />
       )}
@@ -37,40 +37,52 @@ export function StatusBadge({ status }) {
     probation: { label: 'Probation', variant: 'primary' },
     terminated: { label: 'Terminated', variant: 'danger' },
     resigned: { label: 'Resigned', variant: 'secondary' },
-    
+
     // Task Status
     todo: { label: 'To Do', variant: 'secondary' },
     in_progress: { label: 'In Progress', variant: 'primary' },
     in_review: { label: 'In Review', variant: 'warning' },
     done: { label: 'Done', variant: 'success' },
     cancelled: { label: 'Cancelled', variant: 'danger' },
-    
+
     // Leave Status
     pending: { label: 'Pending', variant: 'warning' },
     approved: { label: 'Approved', variant: 'success' },
     rejected: { label: 'Rejected', variant: 'danger' },
-    
+
     // Attendance
     present: { label: 'Present', variant: 'success' },
     absent: { label: 'Absent', variant: 'danger' },
     late: { label: 'Late', variant: 'warning' },
     half_day: { label: 'Half Day', variant: 'warning' },
-    
+
     // Invoice
     draft: { label: 'Draft', variant: 'secondary' },
     sent: { label: 'Sent', variant: 'primary' },
     paid: { label: 'Paid', variant: 'success' },
     overdue: { label: 'Overdue', variant: 'danger' },
-    
+
+    // Recruitment - Applications
+    new: { label: 'New', variant: 'primary' },
+    reviewed: { label: 'Reviewed', variant: 'warning' },
+    interviewed: { label: 'Interviewed', variant: 'purple' }, // Need to ensure 'purple' variant exists or use 'primary'
+    hired: { label: 'Hired', variant: 'success' },
+    rejected: { label: 'Rejected', variant: 'danger' },
+
+    // Recruitment - Enquiries
+    read: { label: 'Read', variant: 'warning' },
+    replied: { label: 'Replied', variant: 'success' },
+    closed: { label: 'Closed', variant: 'secondary' },
+
     // Project
     planned: { label: 'Planned', variant: 'secondary' },
     completed: { label: 'Completed', variant: 'success' },
     on_hold: { label: 'On Hold', variant: 'warning' },
   };
 
-  const config = statusConfig[status?.toLowerCase()] || { 
-    label: status || 'Unknown', 
-    variant: 'secondary' 
+  const config = statusConfig[status?.toLowerCase()] || {
+    label: status || 'Unknown',
+    variant: 'secondary'
   };
 
   return <Badge variant={config.variant} dot>{config.label}</Badge>;

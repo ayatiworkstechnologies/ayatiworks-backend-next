@@ -1,19 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FiUser, FiBriefcase, FiDownload, FiEye, FiTrash2, FiLinkedin, FiGlobe, FiX, FiRefreshCw, FiPlus } from 'react-icons/fi';
-import Swal from 'sweetalert2';
+import { useState, useEffect, useRef } from 'react';
+import {
+    HiOutlineUser, HiOutlineBriefcase, HiOutlineDownload, HiOutlineEye,
+    HiOutlineTrash, HiOutlineExternalLink, HiOutlineGlobe, HiOutlineX,
+    HiOutlineRefresh, HiOutlinePlus, HiOutlineSearch, HiOutlineFilter
+} from 'react-icons/hi';
+import { Card, CardHeader, CardBody, Button, StatusBadge, Avatar, LoadingSpinner } from '@/components/ui';
+import { useToast } from '@/context/ToastContext';
 import api from '@/lib/api';
 
-const statusColors = {
-    new: 'bg-blue-100 text-blue-700',
-    reviewed: 'bg-yellow-100 text-yellow-700',
-    interviewed: 'bg-purple-100 text-purple-700',
-    rejected: 'bg-red-100 text-red-700',
-    hired: 'bg-green-100 text-green-700',
-};
-
 export default function ApplicationsPage() {
+    const toast = useToast();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('');
@@ -24,6 +22,7 @@ export default function ApplicationsPage() {
     const [showModal, setShowModal] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [creating, setCreating] = useState(false);
+    const fileInputRef = useRef(null);
 
     const handleCreate = async (e) => {
         e.preventDefault();
@@ -37,19 +36,12 @@ export default function ApplicationsPage() {
                 body: formData,
             });
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Application Created',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2000,
-            });
+            toast.success('Application created successfully');
             setShowCreateModal(false);
             fetchApplications();
             form.reset();
         } catch (error) {
-            Swal.fire('Error', 'Failed to create application', 'error');
+            toast.error('Failed to create application');
         } finally {
             setCreating(false);
         }
@@ -67,7 +59,7 @@ export default function ApplicationsPage() {
             setTotalPages(data.total_pages || 1);
         } catch (error) {
             console.error('Failed to fetch applications:', error);
-            Swal.fire('Error', 'Failed to load applications', 'error');
+            toast.error('Failed to load applications');
         } finally {
             setLoading(false);
         }
@@ -85,178 +77,150 @@ export default function ApplicationsPage() {
     const handleStatusUpdate = async (id, newStatus) => {
         try {
             await api.put(`/public/careers/${id}`, { status: newStatus });
-            Swal.fire({
-                icon: 'success',
-                title: 'Status Updated',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2000,
-            });
+            toast.success(`Status updated to ${newStatus}`);
             fetchApplications();
-            setShowModal(false);
+            // Update local state for immediate feedback in modal
+            if (selectedApp?.id === id) {
+                setSelectedApp(prev => ({ ...prev, status: newStatus }));
+            }
         } catch (error) {
-            Swal.fire('Error', 'Failed to update status', 'error');
+            toast.error('Failed to update status');
         }
     };
 
     const handleDelete = async (id) => {
-        const result = await Swal.fire({
-            title: 'Delete Application?',
-            text: 'This action cannot be undone.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Delete',
-        });
+        if (!confirm('Are you sure you want to delete this application? This action cannot be undone.')) return;
 
-        if (result.isConfirmed) {
-            try {
-                await api.delete(`/public/careers/${id}`);
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Deleted',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2000,
-                });
-                fetchApplications();
-            } catch (error) {
-                Swal.fire('Error', 'Failed to delete application', 'error');
-            }
+        try {
+            await api.delete(`/public/careers/${id}`);
+            toast.success('Application deleted');
+            fetchApplications();
+            if (showModal && selectedApp?.id === id) setShowModal(false);
+        } catch (error) {
+            toast.error('Failed to delete application');
         }
     };
 
     return (
-        <div className="p-6">
+        <div className="space-y-6 animate-fade-in-up pb-10">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Job Applications</h1>
-                    <p className="text-muted-foreground mt-1">Review and manage candidate applications</p>
+                    <p className="text-muted-foreground">Manage and review candidate applications</p>
                 </div>
-                <div className="flex items-center gap-3 mt-4 md:mt-0 flex-wrap">
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="btn btn-primary flex items-center gap-2"
-                    >
-                        <FiPlus className="w-4 h-4" /> Add Application
-                    </button>
+                <div className="flex items-center gap-3">
+                    <Button onClick={() => setShowCreateModal(true)} variant="primary" className="shadow-lg shadow-primary/20">
+                        <HiOutlinePlus className="w-4 h-4 mr-2" /> Add Application
+                    </Button>
+                    <Button onClick={fetchApplications} variant="outline" size="icon" title="Refresh">
+                        <HiOutlineRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    </Button>
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 bg-card p-4 rounded-xl border border-border/50 shadow-sm">
+                <div className="relative flex-1">
+                    <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <input
                         type="text"
-                        placeholder="Filter by position..."
+                        placeholder="Search by position..."
                         value={positionFilter}
                         onChange={(e) => setPositionFilter(e.target.value)}
-                        className="input py-2 px-3 w-48"
+                        className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                     />
+                </div>
+                <div className="relative w-full md:w-56">
+                    <HiOutlineFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="input py-2 px-3 pr-8"
+                        className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none cursor-pointer"
                     >
-                        <option value="">All Status</option>
+                        <option value="">All Statuses</option>
                         <option value="new">New</option>
                         <option value="reviewed">Reviewed</option>
                         <option value="interviewed">Interviewed</option>
                         <option value="rejected">Rejected</option>
                         <option value="hired">Hired</option>
                     </select>
-                    <button
-                        onClick={fetchApplications}
-                        className="btn btn-secondary p-2"
-                        title="Refresh"
-                    >
-                        <FiRefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="card overflow-hidden">
+            {/* Content */}
+            <Card className="border-0 shadow-xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-muted/50">
+                        <thead className="bg-muted/50 border-b border-border">
                             <tr>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Candidate</th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Position</th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Experience</th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Applied</th>
-                                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
+                                <th className="text-left px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Candidate</th>
+                                <th className="text-left px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Position</th>
+                                <th className="text-left px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Experience</th>
+                                <th className="text-left px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Status</th>
+                                <th className="text-left px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Applied Date</th>
+                                <th className="text-right px-6 py-4 font-semibold text-muted-foreground text-xs uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-border">
+                        <tbody className="divide-y divide-border/50">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-12 text-muted-foreground">
-                                        Loading...
+                                    <td colSpan={6} className="py-20 text-center">
+                                        <LoadingSpinner size="lg" />
+                                        <p className="text-muted-foreground mt-2">Loading applications...</p>
                                     </td>
                                 </tr>
                             ) : applications.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-12 text-muted-foreground">
-                                        No applications found
+                                    <td colSpan={6} className="py-16 text-center">
+                                        <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <HiOutlineBriefcase className="w-8 h-8 text-muted-foreground/50" />
+                                        </div>
+                                        <p className="text-lg font-medium text-foreground">No applications found</p>
+                                        <p className="text-muted-foreground text-sm mt-1">Try adjusting your filters or add a new application.</p>
                                     </td>
                                 </tr>
                             ) : (
                                 applications.map((item) => (
-                                    <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                                        <td className="px-4 py-4">
+                                    <tr key={item.id} className="hover:bg-muted/30 transition-colors group">
+                                        <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                    <FiUser className="w-5 h-5 text-primary" />
-                                                </div>
+                                                <Avatar name={`${item.first_name} ${item.last_name}`} className="w-10 h-10 ring-2 ring-background border border-border" />
                                                 <div>
-                                                    <p className="font-medium">{item.first_name} {item.last_name}</p>
-                                                    <p className="text-sm text-muted-foreground">{item.email}</p>
+                                                    <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{item.first_name} {item.last_name}</p>
+                                                    <p className="text-xs text-muted-foreground">{item.email}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4">
+                                        <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <FiBriefcase className="w-4 h-4 text-muted-foreground" />
-                                                {item.position_applied}
+                                                <span className="font-medium">{item.position_applied}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4 text-muted-foreground">
-                                            {item.experience_years ? `${item.experience_years} years` : 'N/A'}
+                                        <td className="px-6 py-4 text-muted-foreground text-sm">
+                                            {item.experience_years ? `${item.experience_years} years` : <span className="text-muted-foreground/50 italic">N/A</span>}
                                         </td>
-                                        <td className="px-4 py-4">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${statusColors[item.status] || 'bg-slate-100'}`}>
-                                                {item.status}
-                                            </span>
+                                        <td className="px-6 py-4">
+                                            <StatusBadge status={item.status} />
                                         </td>
-                                        <td className="px-4 py-4 text-muted-foreground text-sm">
+                                        <td className="px-6 py-4 text-muted-foreground text-sm">
                                             {new Date(item.created_at).toLocaleDateString()}
                                         </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleView(item)}
-                                                    className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
-                                                    title="View"
-                                                >
-                                                    <FiEye className="w-4 h-4" />
-                                                </button>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button size="sm" variant="ghost" onClick={() => handleView(item)} className="h-8 w-8 p-0">
+                                                    <HiOutlineEye className="w-4 h-4 text-primary" />
+                                                </Button>
                                                 {item.resume_url && (
-                                                    <a
-                                                        href={item.resume_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-2 hover:bg-green-100 rounded-lg text-green-600 transition-colors"
-                                                        title="Download Resume"
-                                                    >
-                                                        <FiDownload className="w-4 h-4" />
+                                                    <a href={item.resume_url} target="_blank" rel="noopener noreferrer">
+                                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                                                            <HiOutlineDownload className="w-4 h-4 text-green-600" />
+                                                        </Button>
                                                     </a>
                                                 )}
-                                                <button
-                                                    onClick={() => handleDelete(item.id)}
-                                                    className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <FiTrash2 className="w-4 h-4" />
-                                                </button>
+                                                <Button size="sm" variant="ghost" onClick={() => handleDelete(item.id)} className="h-8 w-8 p-0 hover:text-destructive">
+                                                    <HiOutlineTrash className="w-4 h-4" />
+                                                </Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -267,102 +231,96 @@ export default function ApplicationsPage() {
                 </div>
 
                 {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-                        <button
+                {!loading && totalPages > 1 && (
+                    <div className="p-4 border-t border-border flex items-center justify-between bg-muted/5">
+                        <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             disabled={page === 1}
-                            className="btn btn-secondary py-1 px-3 disabled:opacity-50"
                         >
                             Previous
-                        </button>
-                        <span className="text-sm text-muted-foreground">
+                        </Button>
+                        <span className="text-sm text-muted-foreground font-medium">
                             Page {page} of {totalPages}
                         </span>
-                        <button
+                        <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             disabled={page === totalPages}
-                            className="btn btn-secondary py-1 px-3 disabled:opacity-50"
                         >
                             Next
-                        </button>
+                        </Button>
                     </div>
                 )}
-            </div>
+            </Card>
 
-            {/* Detail Modal */}
+            {/* Application Detail Modal */}
             {showModal && selectedApp && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-border flex items-center justify-between">
-                            <h2 className="text-xl font-semibold">Application Details</h2>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-muted rounded-lg">
-                                <FiX className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-6">
-                            {/* Candidate Info */}
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <div className="bg-card w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-border/50 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+                        {/* Modal Header */}
+                        <div className="p-6 border-b border-border bg-muted/10 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-                                    {selectedApp.first_name[0]}{selectedApp.last_name[0]}
-                                </div>
+                                <Avatar name={`${selectedApp.first_name} ${selectedApp.last_name}`} size="lg" className="ring-4 ring-background shadow-lg" />
                                 <div>
-                                    <h3 className="text-xl font-semibold">{selectedApp.first_name} {selectedApp.last_name}</h3>
-                                    <p className="text-muted-foreground">{selectedApp.position_applied}</p>
+                                    <h2 className="text-xl font-bold text-foreground">{selectedApp.first_name} {selectedApp.last_name}</h2>
+                                    <p className="text-sm text-muted-foreground">{selectedApp.position_applied}</p>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => setShowModal(false)} className="rounded-full hover:bg-muted">
+                                <HiOutlineX className="w-5 h-5" />
+                            </Button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto space-y-8 custom-scrollbar">
+                            {/* Status Bar */}
+                            <div className="bg-muted/30 p-4 rounded-xl border border-border/50">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Update Status</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {['new', 'reviewed', 'interviewed', 'hired', 'rejected'].map(status => (
+                                        <button
+                                            key={status}
+                                            onClick={() => handleStatusUpdate(selectedApp.id, status)}
+                                            className={`
+                                                px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all
+                                                ${selectedApp.status === status
+                                                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 ring-2 ring-primary ring-offset-2 ring-offset-card'
+                                                    : 'bg-background border border-border text-muted-foreground hover:border-primary/50 hover:text-primary'
+                                                }
+                                            `}
+                                        >
+                                            {status}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* Contact & Links */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm text-muted-foreground">Email</label>
-                                    <p className="font-medium">{selectedApp.email}</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm text-muted-foreground">Phone</label>
-                                    <p className="font-medium">{selectedApp.phone}</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm text-muted-foreground">Experience</label>
-                                    <p className="font-medium">{selectedApp.experience_years ? `${selectedApp.experience_years} years` : 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm text-muted-foreground">Current Company</label>
-                                    <p className="font-medium">{selectedApp.current_company || 'N/A'}</p>
-                                </div>
+                            {/* Info Grid */}
+                            <div className="grid grid-cols-2 gap-6">
+                                <InfoItem label="Email" value={selectedApp.email} />
+                                <InfoItem label="Phone" value={selectedApp.phone} />
+                                <InfoItem label="Experience" value={selectedApp.experience_years ? `${selectedApp.experience_years} Years` : null} />
+                                <InfoItem label="Current Company" value={selectedApp.current_company} />
                             </div>
 
                             {/* Links */}
-                            <div className="flex gap-4">
+                            <div className="flex flex-wrap gap-3">
                                 {selectedApp.linkedin_url && (
-                                    <a
-                                        href={selectedApp.linkedin_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                                    >
-                                        <FiLinkedin /> LinkedIn
+                                    <a href={selectedApp.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-[#0077b5]/10 text-[#0077b5] rounded-lg hover:bg-[#0077b5]/20 transition-colors font-medium text-sm">
+                                        <HiOutlineExternalLink className="w-4 h-4" /> LinkedIn Profile
                                     </a>
                                 )}
                                 {selectedApp.portfolio_url && (
-                                    <a
-                                        href={selectedApp.portfolio_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
-                                    >
-                                        <FiGlobe /> Portfolio
+                                    <a href={selectedApp.portfolio_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-pink-500/10 text-pink-500 rounded-lg hover:bg-pink-500/20 transition-colors font-medium text-sm">
+                                        <HiOutlineGlobe className="w-4 h-4" /> Portfolio
                                     </a>
                                 )}
-
                                 {selectedApp.resume_url && (
-                                    <a
-                                        href={selectedApp.resume_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                                    >
-                                        <FiDownload /> Resume
+                                    <a href={selectedApp.resume_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-600 rounded-lg hover:bg-emerald-500/20 transition-colors font-medium text-sm">
+                                        <HiOutlineDownload className="w-4 h-4" /> Download Resume
                                     </a>
                                 )}
                             </div>
@@ -370,26 +328,14 @@ export default function ApplicationsPage() {
                             {/* Cover Letter */}
                             {selectedApp.cover_letter && (
                                 <div>
-                                    <label className="text-sm text-muted-foreground">Cover Letter</label>
-                                    <p className="mt-2 p-4 bg-muted/50 rounded-lg whitespace-pre-wrap">{selectedApp.cover_letter}</p>
+                                    <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                                        <HiOutlineBriefcase className="w-4 h-4 text-primary" /> Cover Letter
+                                    </h3>
+                                    <div className="bg-muted/30 p-4 rounded-xl border border-border/50 text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                                        {selectedApp.cover_letter}
+                                    </div>
                                 </div>
                             )}
-
-                            {/* Actions */}
-                            <div>
-                                <label className="text-sm text-muted-foreground">Update Status</label>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    {['reviewed', 'interviewed', 'hired', 'rejected'].map(status => (
-                                        <button
-                                            key={status}
-                                            onClick={() => handleStatusUpdate(selectedApp.id, status)}
-                                            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${statusColors[status]} hover:opacity-80 transition-opacity`}
-                                        >
-                                            {status}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -397,79 +343,98 @@ export default function ApplicationsPage() {
 
             {/* Create Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-border flex items-center justify-between">
-                            <h2 className="text-xl font-semibold">Add New Application</h2>
-                            <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-muted rounded-lg">
-                                <FiX className="w-5 h-5" />
-                            </button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-card w-full max-w-2xl rounded-2xl shadow-2xl border border-border/50 max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10">
+                            <h2 className="text-xl font-bold">New Application</h2>
+                            <Button variant="ghost" size="icon" onClick={() => setShowCreateModal(false)}>
+                                <HiOutlineX className="w-5 h-5" />
+                            </Button>
                         </div>
-                        <form onSubmit={handleCreate} className="p-6 space-y-4">
+                        <form onSubmit={handleCreate} className="p-6 space-y-6">
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">First Name <span className="text-red-500">*</span></label>
-                                    <input name="first_name" required className="input w-full" placeholder="John" />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">First Name *</label>
+                                    <input name="first_name" required className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="John" />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Last Name <span className="text-red-500">*</span></label>
-                                    <input name="last_name" required className="input w-full" placeholder="Doe" />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Last Name *</label>
+                                    <input name="last_name" required className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="Doe" />
                                 </div>
                             </div>
+
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Email <span className="text-red-500">*</span></label>
-                                    <input name="email" type="email" required className="input w-full" placeholder="john@example.com" />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email *</label>
+                                    <input name="email" type="email" required className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="john@example.com" />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Phone <span className="text-red-500">*</span></label>
-                                    <input name="phone" required className="input w-full" placeholder="+1234567890" />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Phone *</label>
+                                    <input name="phone" required className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="+1 (555) 000-0000" />
                                 </div>
                             </div>
+
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Position <span className="text-red-500">*</span></label>
-                                    <input name="position_applied" required className="input w-full" placeholder="Software Engineer" />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Position *</label>
+                                    <input name="position_applied" required className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="Senior Developer" />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Experience (Years)</label>
-                                    <input name="experience_years" type="number" className="input w-full" placeholder="3" />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Experience (Years)</label>
+                                    <input name="experience_years" type="number" className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="5" />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Current Company</label>
-                                <input name="current_company" className="input w-full" placeholder="Current Company Name" />
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Current Company</label>
+                                <input name="current_company" className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="Tech Corp Inc." />
                             </div>
+
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">LinkedIn URL</label>
-                                    <input name="linkedin_url" type="url" className="input w-full" placeholder="https://linkedin.com/in/..." />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">LinkedIn URL</label>
+                                    <input name="linkedin_url" type="url" className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="https://linkedin.com/in/..." />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1">Portfolio URL</label>
-                                    <input name="portfolio_url" type="url" className="input w-full" placeholder="https://portfolio.com" />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Portfolio URL</label>
+                                    <input name="portfolio_url" type="url" className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="https://..." />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Resume</label>
-                                <input name="resume" type="file" accept=".pdf,.doc,.docx" className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Resume (PDF/DOC)</label>
+                                <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => fileInputRef.current.click()}>
+                                    <input ref={fileInputRef} name="resume" type="file" accept=".pdf,.doc,.docx" className="hidden" />
+                                    <HiOutlineDownload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                                    <p className="text-sm font-medium text-primary">Click to upload resume</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Max 5MB</p>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Cover Letter</label>
-                                <textarea name="cover_letter" rows={3} className="input w-full resize-none" placeholder="Additional notes..." />
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cover Letter</label>
+                                <textarea name="cover_letter" rows={4} className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none" placeholder="Tell us why you're a great fit..." />
                             </div>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-secondary">
-                                    Cancel
-                                </button>
-                                <button type="submit" disabled={creating} className="btn btn-primary">
-                                    {creating ? 'Creating...' : 'Create Application'}
-                                </button>
+
+                            <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                                <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+                                <Button type="submit" variant="primary" disabled={creating}>
+                                    {creating ? <LoadingSpinner size="sm" color="white" /> : 'Submit Application'}
+                                </Button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+function InfoItem({ label, value }) {
+    return (
+        <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{label}</p>
+            <p className="text-sm font-medium text-foreground">{value || <span className="text-muted-foreground/50 italic">Not set</span>}</p>
         </div>
     );
 }

@@ -104,16 +104,24 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Memoize context value to prevent object recreation on every render
-  const value = useMemo(() => ({
-    user,
-    loading,
-    isAuthenticated,
-    login,
-    verify2FA,
-    logout,
-    checkAuth,
-    refreshUser,
-  }), [user, loading, isAuthenticated, login, verify2FA, logout, checkAuth, refreshUser]);
+  const value = useMemo(() => {
+    // Defensive coding: Ensure user always has a role object to prevent crashes
+    const safeUser = user ? {
+      ...user,
+      role: user.role || { name: '', code: '' }
+    } : null;
+
+    return {
+      user: safeUser,
+      loading,
+      isAuthenticated,
+      login,
+      verify2FA,
+      logout,
+      checkAuth,
+      refreshUser,
+    };
+  }, [user, loading, isAuthenticated, login, verify2FA, logout, checkAuth, refreshUser]);
 
   return (
     <AuthContext.Provider value={value}>

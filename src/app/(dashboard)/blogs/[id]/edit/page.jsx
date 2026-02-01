@@ -13,7 +13,8 @@ import {
   HiOutlineChevronDown, HiOutlineChevronUp, HiOutlineSave,
   HiOutlineDocumentText, HiOutlineGlobe, HiOutlineMenuAlt2, HiOutlinePhotograph,
   HiOutlineCode, HiOutlineAnnotation, HiOutlineVideoCamera, HiOutlineLink,
-  HiOutlineFolder, HiOutlineEye, HiOutlinePencilAlt
+  HiOutlineFolder, HiOutlineEye, HiOutlinePencilAlt,
+  HiOutlineQuestionMarkCircle
 } from 'react-icons/hi';
 
 // Section type definitions
@@ -99,6 +100,10 @@ export default function EditBlogPage({ params }) {
   const [sections, setSections] = useState([]);
   const [expandedSections, setExpandedSections] = useState({});
 
+  // FAQs
+  const [faqs, setFaqs] = useState([]);
+  const [expandedFaqs, setExpandedFaqs] = useState({});
+
   useEffect(() => {
     if (id) {
       fetchBlog();
@@ -152,6 +157,11 @@ export default function EditBlogPage({ params }) {
           cta_url: s.cta_url || '',
         }));
         setSections(mappedSections.sort((a, b) => a.order - b.order));
+      }
+
+      // Load FAQs
+      if (data.faqs && Array.isArray(data.faqs)) {
+        setFaqs(data.faqs.map((f, idx) => ({ ...f, id: idx }))); // Assign temp IDs if needed
       }
     } catch (error) {
       console.error('Error fetching blog:', error);
@@ -222,6 +232,25 @@ export default function EditBlogPage({ params }) {
     setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // FAQ Handlers
+  const addFaq = () => {
+    const newFaq = { id: Date.now(), question: '', answer: '' };
+    setFaqs([...faqs, newFaq]);
+    setExpandedFaqs(prev => ({ ...prev, [newFaq.id]: true }));
+  };
+
+  const updateFaq = (id, field, value) => {
+    setFaqs(faqs.map(f => f.id === id ? { ...f, [field]: value } : f));
+  };
+
+  const removeFaq = (id) => {
+    setFaqs(faqs.filter(f => f.id !== id));
+  };
+
+  const toggleFaq = (id) => {
+    setExpandedFaqs(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -248,6 +277,7 @@ export default function EditBlogPage({ params }) {
           order: i,
           id: typeof s.id === 'number' && s.id > 1000000000 ? undefined : s.id
         })),
+        faqs: faqs.map(f => ({ question: f.question, answer: f.answer })),
       };
 
       await api.put(`/blogs/${id}`, payload);
@@ -521,6 +551,70 @@ export default function EditBlogPage({ params }) {
                   ))}
 
                   <BlockInserter onInsert={addSection} />
+                </div>
+              </CardBody>
+            </Card>
+          </main>
+
+          {/* FAQ Section */}
+          <main className="lg:col-span-full space-y-6">
+            <Card className="glass-card">
+              <CardBody className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-semibold flex items-center gap-2 text-lg">
+                    <HiOutlineQuestionMarkCircle className="w-5 h-5 text-primary" /> Frequently Asked Questions
+                  </h2>
+                  <Button type="button" size="sm" variant="outline" onClick={addFaq}>
+                    <HiOutlinePlus className="w-4 h-4 mr-2" /> Add FAQ
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  {faqs.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
+                      No FAQs added yet.
+                    </div>
+                  ) : (
+                    faqs.map((faq, index) => (
+                      <div key={faq.id} className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+                        <div
+                          className="flex items-center justify-between p-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => toggleFaq(faq.id)}
+                        >
+                          <span className="font-medium truncate flex-1 mr-4">
+                            {faq.question || `FAQ #${index + 1}`}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); removeFaq(faq.id); }} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded transition-colors">
+                              <HiOutlineTrash className="w-4 h-4" />
+                            </button>
+                            {expandedFaqs[faq.id] ? <HiOutlineChevronUp className="w-4 h-4" /> : <HiOutlineChevronDown className="w-4 h-4" />}
+                          </div>
+                        </div>
+
+                        {expandedFaqs[faq.id] && (
+                          <div className="p-4 space-y-4 border-t border-border">
+                            <Input
+                              label="Question"
+                              value={faq.question}
+                              onChange={(e) => updateFaq(faq.id, 'question', e.target.value)}
+                              placeholder="e.g. What is your return policy?"
+                            />
+                            <div>
+                              <label className="block text-sm font-medium mb-2">Answer</label>
+                              <textarea
+                                value={faq.answer}
+                                onChange={(e) => updateFaq(faq.id, 'answer', e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                rows={3}
+                                placeholder="Enter the answer..."
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardBody>
             </Card>

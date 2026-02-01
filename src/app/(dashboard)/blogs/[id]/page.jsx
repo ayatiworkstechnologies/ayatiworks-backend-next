@@ -11,7 +11,7 @@ import {
   HiOutlineArrowLeft, HiOutlinePencilAlt, HiOutlineTrash,
   HiOutlineEye, HiOutlineClock, HiOutlineCalendar,
   HiOutlineTag, HiOutlineUser, HiOutlineLink, HiOutlineChevronRight,
-  HiOutlineBookOpen, HiOutlineFolder
+  HiOutlineBookOpen, HiOutlineFolder, HiOutlineQuestionMarkCircle, HiOutlineChevronDown
 } from 'react-icons/hi';
 
 export default function BlogViewPage({ params }) {
@@ -127,7 +127,7 @@ export default function BlogViewPage({ params }) {
       case 'quote':
         return (
           <blockquote key={sectionId} id={sectionId} className="my-8 border-l-4 border-primary pl-6 py-4 bg-primary/5 rounded-r-xl">
-            <p className="text-xl italic text-foreground leading-relaxed">"{section.quote}"</p>
+            <p className="text-xl italic text-foreground leading-relaxed">&quot;{section.quote}&quot;</p>
             {section.quote_author && (
               <cite className="block mt-3 text-sm text-muted-foreground not-italic">— {section.quote_author}</cite>
             )}
@@ -203,7 +203,7 @@ export default function BlogViewPage({ params }) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-foreground mb-2">Blog not found</h2>
-        <p className="text-muted-foreground mb-4">The blog post you're looking for doesn't exist.</p>
+        <p className="text-muted-foreground mb-4">The blog post you&apos;re looking for doesn&apos;t exist.</p>
         <Link href="/blogs">
           <Button variant="primary">Back to Blogs</Button>
         </Link>
@@ -394,6 +394,33 @@ export default function BlogViewPage({ params }) {
               </CardBody>
             </Card>
           )}
+          {/* FAQs */}
+          {blog.faqs && blog.faqs.length > 0 && (
+            <Card className="glass-card">
+              <CardBody className="p-6 md:p-8">
+                <h2 className="font-semibold flex items-center gap-2 text-lg mb-6">
+                  <HiOutlineQuestionMarkCircle className="w-5 h-5 text-primary" /> Frequently Asked Questions
+                </h2>
+                <div className="space-y-4">
+                  {blog.faqs.map((faq, idx) => (
+                    <div key={idx} className="border border-border rounded-xl overflow-hidden bg-card/50">
+                      <details className="group">
+                        <summary className="flex items-center justify-between p-4 cursor-pointer list-none font-medium hover:bg-muted/30 transition-colors">
+                          <span>{faq.question}</span>
+                          <span className="transition group-open:rotate-180">
+                            <HiOutlineChevronDown className="w-4 h-4" />
+                          </span>
+                        </summary>
+                        <div className="p-4 pt-0 text-muted-foreground border-t border-border/50">
+                          <p className="mt-4">{faq.answer}</p>
+                        </div>
+                      </details>
+                    </div>
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
+          )}
         </main>
 
         {/* Right Sidebar - Categories & Actions */}
@@ -484,7 +511,7 @@ export default function BlogViewPage({ params }) {
               </div>
               <h3 className="text-xl font-bold text-foreground mb-2">Delete Blog Post?</h3>
               <p className="text-muted-foreground mb-6">
-                Are you sure you want to delete "{blog.title}"? This action cannot be undone.
+                Are you sure you want to delete &quot;{blog.title}&quot;? This action cannot be undone.
               </p>
               <div className="flex gap-3 justify-center">
                 <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>

@@ -62,12 +62,12 @@ function Header({ onMenuToggle }) {
   const userMenuRef = useClickOutside(handleCloseUserMenu);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-20 px-6 backdrop-blur-xl bg-white/70 border-b border-gray-100/50 transition-all duration-300">
+    <header className="sticky top-0 z-40 flex items-center justify-between h-20 px-6 backdrop-blur-xl bg-background/80 border-b border-border/50 transition-all duration-300">
       <div className="flex items-center gap-4 flex-1">
         {/* Mobile Menu Toggle */}
         <button
           onClick={handleMenuToggle}
-          className="md:hidden p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+          className="md:hidden p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
           aria-label="Open navigation menu"
           aria-expanded="false"
         >
@@ -75,14 +75,14 @@ function Header({ onMenuToggle }) {
         </button>
 
         {/* Search */}
-        <div className="hidden sm:flex items-center gap-3 bg-gray-50/50 hover:bg-white border border-transparent hover:border-gray-200 rounded-2xl px-4 py-2.5 flex-1 max-w-md transition-all duration-300 focus-within:bg-white focus-within:border-blue-200 focus-within:shadow-lg focus-within:shadow-blue-500/10 group">
-          <HiOutlineSearch className="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+        <div className="hidden sm:flex items-center gap-3 bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border/50 rounded-2xl px-4 py-2.5 flex-1 max-w-md transition-all duration-300 focus-within:bg-background focus-within:border-primary/30 focus-within:shadow-lg focus-within:shadow-primary/10 group">
+          <HiOutlineSearch className="w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
             type="text"
             placeholder="Search anything..."
-            className="bg-transparent border-none outline-none text-sm flex-1 placeholder-gray-400 text-gray-700"
+            className="bg-transparent border-none outline-none text-sm flex-1 placeholder-muted-foreground text-foreground"
           />
-          <div className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gray-100 border border-gray-200 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+          <div className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-lg bg-muted/50 border border-border/50 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
             ⌘ K
           </div>
         </div>
@@ -144,40 +144,62 @@ function Header({ onMenuToggle }) {
           )}
         </div>
 
-        <div className="w-px h-8 bg-gray-200 mx-1" />
+        <div className="w-px h-8 bg-border/50 mx-1" />
 
         {/* User Menu */}
         <div className="relative" ref={userMenuRef}>
           <button
             onClick={handleToggleUserMenu}
-            className={`flex items-center gap-3 p-1.5 pl-2 rounded-xl border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all duration-200 ${showUserMenu ? 'bg-gray-50 border-gray-200' : ''}`}
+            className={`flex items-center gap-3 p-1.5 pl-3 rounded-xl border border-transparent hover:border-border/50 hover:bg-muted/50 transition-all duration-200 ${showUserMenu ? 'bg-muted/50 border-border/50' : ''}`}
             aria-label="Open user menu"
             aria-expanded={showUserMenu}
             aria-haspopup="true"
           >
             <div className={`hidden md:flex flex-col items-end mr-1 transition-opacity ${showUserMenu ? 'opacity-100' : 'opacity-80'}`}>
-              <span className="text-sm font-bold text-gray-900 leading-none">{user?.first_name || 'Admin'}</span>
-              <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Manager</span>
+              <span className="text-sm font-bold text-foreground leading-none">{user?.first_name || 'User'} {user?.last_name || ''}</span>
+              <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">{user?.role?.name || 'Member'}</span>
             </div>
-            <Avatar name={user?.first_name || 'User'} size="sm" className="ring-2 ring-white shadow-sm" />
-            <HiOutlineChevronDown className={`w-3 h-3 text-gray-400 transition-transform duration-200 hidden md:block ${showUserMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
+            <Avatar
+              name={`${user?.first_name || 'User'} ${user?.last_name || ''}`}
+              src={user?.avatar}
+              size="sm"
+              className="ring-2 ring-background shadow-lg"
+            />
+            <HiOutlineChevronDown className={`w-3 h-3 text-muted-foreground transition-transform duration-200 hidden md:block ${showUserMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden animation-fade-in-up z-50">
+            <div className="absolute right-0 mt-3 w-64 bg-card rounded-2xl shadow-2xl border border-border/50 overflow-hidden animate-scale-in z-50">
+              {/* User Info Header */}
+              <div className="p-4 bg-gradient-to-r from-primary/5 to-transparent border-b border-border/50">
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    name={`${user?.first_name || 'User'} ${user?.last_name || ''}`}
+                    src={user?.avatar}
+                    size="md"
+                    className="ring-2 ring-primary/20 shadow-lg"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{user?.first_name || 'User'} {user?.last_name || ''}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user?.email || 'user@example.com'}</p>
+                    <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold text-primary bg-primary/10 rounded-full uppercase">{user?.role?.name || 'Member'}</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="p-2 space-y-0.5">
-                <Link href="/settings" className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
+                <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-colors">
                   <HiOutlineUser className="w-4.5 h-4.5" />
-                  Profile
+                  My Profile
                 </Link>
-                <Link href="/settings" className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
+                <Link href="/settings" className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-colors">
                   <HiOutlineCog className="w-4.5 h-4.5" />
                   Settings
                 </Link>
               </div>
-              <div className="h-px bg-gray-100 my-1 mx-2" />
+              <div className="h-px bg-border/50 mx-2" />
               <div className="p-2">
-                <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors" aria-label="Sign out">
+                <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-xl transition-colors" aria-label="Sign out">
                   <HiOutlineLogout className="w-4.5 h-4.5" aria-hidden="true" />
                   Sign Out
                 </button>

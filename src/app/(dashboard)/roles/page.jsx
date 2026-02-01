@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import PermissionGuard from '@/components/PermissionGuard';
 import { Card, CardBody, PageHeader } from '@/components/ui';
@@ -11,7 +12,7 @@ import api from '@/lib/api';
 import { useToast } from '@/context/ToastContext';
 import {
   HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineUserGroup,
-  HiOutlineCheck, HiOutlineShieldCheck, HiOutlineLockClosed
+  HiOutlineCheck, HiOutlineShieldCheck, HiOutlineLockClosed, HiOutlineKey
 } from 'react-icons/hi';
 
 function RolesPageContent() {
@@ -138,11 +139,11 @@ function RolesPageContent() {
 
   const openModal = async (role = null) => {
     if (role) {
-      setEditingRole(role);
-
-      // Fetch full role details with permissions
+      // Fetch full role details with permissions first
       try {
         const fullRole = await api.get(`/roles/${role.id}`);
+        // Set editingRole with full permissions data
+        setEditingRole(fullRole);
         setFormData({
           name: fullRole.name,
           code: fullRole.code || '',
@@ -152,6 +153,8 @@ function RolesPageContent() {
         });
       } catch (error) {
         console.error('Failed to fetch role details:', error);
+        // Fallback to basic role data
+        setEditingRole(role);
         setFormData({
           name: role.name,
           code: role.code || '',
@@ -238,14 +241,23 @@ function RolesPageContent() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader
-        title="Roles & Permissions"
+        title="Roles"
         description="Manage user roles and their associated permissions"
       >
-        <PermissionGuard anyPermission={['role.create', 'super_admin']}>
-          <Button variant="primary" onClick={() => openModal()} className="shadow-lg shadow-primary/20">
-            <HiOutlinePlus className="w-5 h-5" /> Create Role
-          </Button>
-        </PermissionGuard>
+        <div className="flex gap-2">
+          <PermissionGuard anyPermission={['permission.view', 'super_admin']}>
+            <Link href="/permissions">
+              <Button variant="secondary" className="gap-2">
+                <HiOutlineKey className="w-4 h-4" /> View Permissions
+              </Button>
+            </Link>
+          </PermissionGuard>
+          <PermissionGuard anyPermission={['role.create', 'super_admin']}>
+            <Button variant="primary" onClick={() => openModal()} className="shadow-lg shadow-primary/20">
+              <HiOutlinePlus className="w-5 h-5" /> Create Role
+            </Button>
+          </PermissionGuard>
+        </div>
       </PageHeader>
 
       {/* Roles Grid */}

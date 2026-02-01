@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usePermission } from '@/hooks/usePermission';
 import { navigationContext, filterNavigationGroups } from '@/lib/navigationConfig';
+import { Avatar } from '@/components/ui';
 import {
   HiOutlineChevronLeft, HiOutlineChevronRight
 } from 'react-icons/hi';
@@ -95,10 +96,10 @@ function Sidebar({ collapsed, onToggle, className = '' }) {
       <div className="flex-shrink-0 h-20 flex items-center justify-center border-b border-border/40 relative z-10 px-3">
         <Link href="/dashboard" className={`flex items-center overflow-hidden w-full group ${collapsed ? 'justify-center' : 'px-4 gap-3'}`}>
           <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-primary to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform duration-300">
-            <span className="font-bold text-lg font-heading">E</span>
+            <span className="font-bold text-lg font-heading">A</span>
           </div>
           <div className={`flex flex-col flex-1 transition-all duration-300 ${collapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100 ml-1'}`}>
-            <span className="font-bold text-foreground text-lg leading-tight font-heading">Enterprise</span>
+            <span className="font-bold text-foreground text-lg leading-tight font-heading">Ayatiworks</span>
             <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">Workspace</span>
           </div>
         </Link>
@@ -144,29 +145,32 @@ function Sidebar({ collapsed, onToggle, className = '' }) {
         </div>
       )}
 
-      {/* 3. Footer Section */}
+      {/* 3. Footer Section - User Profile */}
       <div className="border-t border-border/40 p-3 bg-muted/20 z-10 backdrop-blur-md">
-        <div className={`flex items-center gap-3 mb-2 rounded-xl transition-all ${collapsed ? 'p-2 justify-center' : 'px-4 py-3 bg-white/50 dark:bg-white/5 border border-white/20 shadow-sm'}`}>
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-tr from-secondary to-slate-200 flex items-center justify-center text-secondary-foreground text-xs font-bold ring-2 ring-white dark:ring-slate-800">
-            {user?.first_name ? user.first_name[0] : 'U'}
-          </div>
+        <div className={`flex items-center gap-3 mb-2 rounded-xl transition-all hover:scale-[1.02] cursor-pointer ${collapsed ? 'p-2 justify-center' : 'px-4 py-3 bg-gradient-to-r from-primary/5 to-transparent border border-primary/10 shadow-sm hover:border-primary/20 hover:shadow-md'}`}>
+          <Avatar
+            name={`${user?.first_name || 'User'} ${user?.last_name || ''}`}
+            src={user?.avatar}
+            size="sm"
+            className="ring-2 ring-background shadow-lg"
+          />
 
           {!collapsed && (
             <div className="flex-1 min-w-0 overflow-hidden">
               <p className="text-sm font-bold text-foreground truncate">{user?.first_name || 'User'} {user?.last_name}</p>
-              <p className="text-xs text-muted-foreground truncate capitalize">{user?.role?.name || 'Member'}</p>
+              <p className="text-[10px] text-primary font-semibold uppercase tracking-wider truncate">{user?.role?.name || 'Member'}</p>
             </div>
           )}
         </div>
 
         <button
           onClick={onToggle}
-          className="w-full flex items-center justify-center p-2 text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-lg transition-colors gap-2"
+          className="w-full flex items-center justify-center p-2.5 text-muted-foreground hover:bg-primary/10 hover:text-primary rounded-xl transition-all gap-2 group"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed}
         >
-          {collapsed ? <HiOutlineChevronRight className="w-5 h-5" aria-hidden="true" /> : <HiOutlineChevronLeft className="w-5 h-5" aria-hidden="true" />}
-          {!collapsed && <span className="text-xs font-bold uppercase tracking-wider">Collapse Sidebar</span>}
+          {collapsed ? <HiOutlineChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" /> : <HiOutlineChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" aria-hidden="true" />}
+          {!collapsed && <span className="text-xs font-bold uppercase tracking-wider">Collapse</span>}
         </button>
       </div>
     </aside>

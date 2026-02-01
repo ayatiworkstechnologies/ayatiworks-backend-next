@@ -94,10 +94,10 @@ export default function InvoiceDetailPage() {
           <div className="flex justify-between items-start mb-8">
             <div>
               <div className="w-16 h-16 bg-gradient-to-br from-[var(--primary-500)] to-[var(--primary-600)] rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">
-                E
+                A
               </div>
-              <h2 className="text-xl font-bold">Enterprise HRMS</h2>
-              <p className="text-[var(--text-tertiary)]">contact@enterprise.com</p>
+              <h2 className="text-xl font-bold">Ayatiworks</h2>
+              <p className="text-[var(--text-tertiary)]">contact@ayatiworks.com</p>
             </div>
             <div className="text-right">
               <h1 className="text-3xl font-bold text-[var(--primary-600)]">INVOICE</h1>

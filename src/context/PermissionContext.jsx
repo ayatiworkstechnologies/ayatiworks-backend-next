@@ -23,12 +23,20 @@ export function PermissionProvider({ children }) {
             setLoading(true);
             const response = await api.get('/permissions/my-permissions');
 
-            // Extract permission codes
-            const permissionCodes = response.map(p => p.code);
-            setPermissions(permissionCodes);
+            if (Array.isArray(response)) {
+                // Extract permission codes
+                const permissionCodes = response.map(p => p.code);
+                setPermissions(permissionCodes);
 
-            // Store full permission objects for reference
-            localStorage.setItem('user_permissions', JSON.stringify(permissionCodes));
+                // Store full permission objects for reference
+                localStorage.setItem('user_permissions', JSON.stringify(permissionCodes));
+            } else {
+                console.warn('Permissions response is not an array:', response);
+                setPermissions([]);
+                setUserRole(null);
+            }
+
+
 
         } catch (error) {
             console.error('Failed to fetch permissions:', error);

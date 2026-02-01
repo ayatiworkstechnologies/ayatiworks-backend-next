@@ -86,7 +86,7 @@ export default function ContactPage() {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-slate-900">Email Us</h3>
-                                    <p className="text-slate-600 mt-1">support@enterprise-hrms.com</p>
+                                    <p className="text-slate-600 mt-1">support@ayatiworks.com</p>
                                 </div>
                             </div>
                         </div>

@@ -1,5 +1,6 @@
 import {
   HiOutlineHome,
+  HiOutlineUser,
   HiOutlineUsers,
   HiOutlineUserGroup,
   HiOutlineClock,
@@ -35,15 +36,14 @@ export const navigationContext = [
         permission: 'dashboard.view',
       },
       {
-        title: 'My Profile',
-        href: '/profile',
-        iconComponent: HiOutlineUsers,
-        permission: 'employee.view',
-      },
-      {
         title: 'Notifications',
         href: '/notifications',
         iconComponent: HiOutlineBell,
+      },
+      {
+        title: 'My Profile',
+        href: '/profile',
+        iconComponent: HiOutlineUser,
       },
     ]
   },
@@ -83,12 +83,6 @@ export const navigationContext = [
         href: '/employees',
         iconComponent: HiOutlineUsers,
         permission: 'employee.view_all',
-      },
-      {
-        title: 'Shifts',
-        href: '/shifts',
-        iconComponent: HiOutlineClock,
-        permission: 'shift.view',
       },
       {
         title: 'Attendance',
@@ -168,7 +162,7 @@ export const navigationContext = [
     ]
   },
   {
-    group: 'Organization',
+    group: 'System',
     items: [
       {
         title: 'Users',
@@ -177,39 +171,16 @@ export const navigationContext = [
         permission: 'user.view',
       },
       {
-        title: 'Companies',
-        href: '/companies',
-        iconComponent: HiOutlineOfficeBuilding,
-        permission: 'company.view',
-      },
-      {
-        title: 'Branches',
-        href: '/branches',
-        iconComponent: HiOutlineLocationMarker,
-        permission: 'branch.view',
-      },
-      {
-        title: 'Departments',
-        href: '/departments',
-        iconComponent: HiOutlineCollection,
-        permission: 'department.view',
-      },
-      {
-        title: 'Designations',
-        href: '/designations',
-        iconComponent: HiOutlineBadgeCheck,
-        permission: 'designation.view',
-      },
-    ]
-  },
-  {
-    group: 'System',
-    items: [
-      {
-        title: 'Roles & Perms',
+        title: 'Roles',
         href: '/roles',
         iconComponent: HiOutlineShieldCheck,
         permission: 'role.view',
+      },
+      {
+        title: 'Permissions',
+        href: '/permissions',
+        iconComponent: HiOutlineShieldCheck,
+        anyPermission: ['permission.view', 'super_admin'],
       },
       {
         title: 'Settings',

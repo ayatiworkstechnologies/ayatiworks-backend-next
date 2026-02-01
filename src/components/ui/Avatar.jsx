@@ -9,10 +9,12 @@ export default function Avatar({
   className = ''
 }) {
   const sizes = {
-    sm: 'avatar-sm',
-    md: 'avatar-md',
-    lg: 'avatar-lg',
-    xl: 'avatar-xl',
+    xs: 'w-6 h-6 text-[10px]',
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-10 h-10 text-sm',
+    lg: 'w-12 h-12 text-base',
+    xl: 'w-16 h-16 text-xl',
+    '2xl': 'w-24 h-24 text-2xl',
   };
 
   const getInitials = (name) => {
@@ -26,9 +28,13 @@ export default function Avatar({
   };
 
   return (
-    <div className={`avatar ${sizes[size]} ${className}`}>
+    <div className={`relative flex items-center justify-center rounded-xl overflow-hidden bg-gradient-to-br from-primary to-indigo-600 text-white font-bold ${sizes[size] || sizes.md} ${className}`}>
       {src ? (
-        <img src={api.getMediaUrl(src)} alt={name || 'Avatar'} />
+        <img
+          src={api.getMediaUrl(src)}
+          alt={name || 'Avatar'}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       ) : (
         <span>{getInitials(name)}</span>
       )}

@@ -12,3 +12,5 @@ export { Breadcrumb, PageHeader } from './Breadcrumb';
 export { default as PageHeaderComponent } from './PageHeader';
 export { default as RichTextEditor } from './RichTextEditor';
 export { default as ImageUpload } from './ImageUpload';
+export { default as ProfileCard } from './ProfileCard';
+export { default as LoadingSpinner, LoadingOverlay, LoadingInline, LoadingButton } from './LoadingSpinner';

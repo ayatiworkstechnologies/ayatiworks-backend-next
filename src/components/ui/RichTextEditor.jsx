@@ -9,7 +9,8 @@ import {
     FaBold, FaItalic, FaUnderline, FaStrikethrough,
     FaListUl, FaListOl,
     FaAlignLeft, FaAlignCenter, FaAlignRight, FaAlignJustify,
-    FaUndo, FaRedo, FaHeading, FaParagraph, FaMinus, FaQuoteLeft
+    FaUndo, FaRedo, FaHeading, FaParagraph, FaMinus, FaQuoteLeft,
+    FaPalette
 } from 'react-icons/fa';
 import { BiHeading } from 'react-icons/bi';
 import api from '@/lib/api';
@@ -18,6 +19,7 @@ import api from '@/lib/api';
 export default function RichTextEditor({ value, onChange, placeholder, minHeight = '200px' }) {
     const editorRef = useRef(null);
     const fileInputRef = useRef(null);
+    const colorInputRef = useRef(null);
     const [showImageModal, setShowImageModal] = useState(false);
     const [showHeadingMenu, setShowHeadingMenu] = useState(false);
     const [imageUrl, setImageUrl] = useState('');
@@ -227,6 +229,22 @@ export default function RichTextEditor({ value, onChange, placeholder, minHeight
                     <ToolbarBtn icon={FaItalic} onClick={() => execCommand('italic')} title="Italic (Ctrl+I)" />
                     <ToolbarBtn icon={FaUnderline} onClick={() => execCommand('underline')} title="Underline (Ctrl+U)" />
                     <ToolbarBtn icon={FaStrikethrough} onClick={() => execCommand('strikeThrough')} title="Strikethrough" />
+                </div>
+                <div className="w-px h-6 bg-border mx-1.5" />
+
+                {/* Text Color */}
+                <div className="relative flex items-center">
+                    <ToolbarBtn
+                        icon={FaPalette}
+                        onClick={() => colorInputRef.current?.click()}
+                        title="Text Color"
+                    />
+                    <input
+                        ref={colorInputRef}
+                        type="color"
+                        onChange={(e) => execCommand('foreColor', e.target.value)}
+                        className="absolute opacity-0 w-0 h-0"
+                    />
                 </div>
                 <div className="w-px h-6 bg-border mx-1.5" />
 
