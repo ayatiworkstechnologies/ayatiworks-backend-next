@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardBody, RichTextEditor, ImageUpload } from '@/components/ui';
+import { Card, CardHeader, CardBody, RichTextEditor, ImageUpload } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import api from '@/lib/api';
@@ -11,11 +11,10 @@ import { useToast } from '@/context/ToastContext';
 import {
   HiOutlineArrowLeft, HiOutlinePlus, HiOutlineTrash,
   HiOutlineChevronDown, HiOutlineChevronUp, HiOutlineSave,
-  HiOutlineDocumentText, HiOutlineUser, HiOutlineTag, HiOutlineClock,
-  HiOutlineGlobe, HiOutlineMenuAlt2, HiOutlinePhotograph,
+  HiOutlineDocumentText, HiOutlineGlobe, HiOutlineMenuAlt2, HiOutlinePhotograph,
   HiOutlineCode, HiOutlineAnnotation, HiOutlineVideoCamera, HiOutlineLink,
   HiOutlineFolder, HiOutlineEye, HiOutlinePencilAlt,
-  HiOutlineQuestionMarkCircle
+  HiOutlineQuestionMarkCircle, HiOutlineSparkles
 } from 'react-icons/hi';
 
 // Section type definitions
@@ -28,12 +27,30 @@ const SECTION_TYPES = [
   { id: 'cta', label: 'CTA', icon: HiOutlineLink, description: 'Call to action' },
 ];
 
-// Block Inserter Component
+// Block Inserter Component with click-outside to close
 const BlockInserter = ({ onInsert }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   return (
-    <div className="relative flex justify-center my-4">
+    <div ref={dropdownRef} className="relative flex justify-center my-4">
       <div className="absolute inset-x-0 h-px bg-border top-1/2 -z-10" />
       <button
         type="button"
@@ -198,14 +215,14 @@ export default function CreateBlogPage() {
     setLoading(true);
 
     try {
-      // Parse tags properly - ensure only valid non-empty strings
+      // Parse tags properly
       let parsedTags = null;
       if (formData.tags && typeof formData.tags === 'string') {
         const tagArray = formData.tags.split(',').map(t => t.trim()).filter(t => t && t.length > 0);
         parsedTags = tagArray.length > 0 ? tagArray : null;
       }
 
-      // Build payload - exclude author_id as backend determines it from authenticated user
+      // Build payload
       const { author_id, ...restFormData } = formData;
       const payload = {
         ...restFormData,
@@ -227,14 +244,13 @@ export default function CreateBlogPage() {
     }
   };
 
-  // Render section editor
+  // Section Editor
   const renderSectionEditor = (section) => {
     const isExpanded = expandedSections[section.id];
     const typeInfo = SECTION_TYPES.find(t => t.id === section.section_type) || SECTION_TYPES[0];
 
     return (
       <div key={section.id} className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-        {/* Section Header */}
         <div
           className="flex items-center justify-between p-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
           onClick={() => toggleSection(section.id)}
@@ -258,10 +274,8 @@ export default function CreateBlogPage() {
           </div>
         </div>
 
-        {/* Section Body */}
         {isExpanded && (
           <div className="p-4 space-y-4 border-t border-border">
-            {/* Common heading field */}
             <Input
               label="Section Heading"
               value={section.heading}
@@ -269,10 +283,9 @@ export default function CreateBlogPage() {
               placeholder="Enter heading..."
             />
 
-            {/* Type-specific fields */}
             {section.section_type === 'content' && (
               <div>
-                <label className="block text-sm font-medium mb-2">Content</label>
+                <label className="input-label">Content</label>
                 <RichTextEditor
                   value={section.content}
                   onChange={(val) => updateSection(section.id, 'content', val)}
@@ -292,92 +305,48 @@ export default function CreateBlogPage() {
                   onAltChange={(val) => updateSection(section.id, 'image_alt', val)}
                   placeholder="https://example.com/image.jpg"
                 />
-                <Input
-                  label="Caption"
-                  value={section.image_caption}
-                  onChange={(e) => updateSection(section.id, 'image_caption', e.target.value)}
-                  placeholder="Image caption..."
-                />
+                <Input label="Caption" value={section.image_caption} onChange={(e) => updateSection(section.id, 'image_caption', e.target.value)} placeholder="Image caption..." />
               </div>
             )}
 
             {section.section_type === 'quote' && (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Quote</label>
-                  <textarea
-                    value={section.quote}
-                    onChange={(e) => updateSection(section.id, 'quote', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    rows={3}
-                    placeholder="Enter quote text..."
-                  />
+                <div className="input-wrapper">
+                  <label className="input-label">Quote</label>
+                  <textarea value={section.quote} onChange={(e) => updateSection(section.id, 'quote', e.target.value)} className="input resize-none" rows={3} placeholder="Enter quote text..." />
                 </div>
-                <Input
-                  label="Author"
-                  value={section.quote_author}
-                  onChange={(e) => updateSection(section.id, 'quote_author', e.target.value)}
-                  placeholder="Quote author..."
-                />
+                <Input label="Author" value={section.quote_author} onChange={(e) => updateSection(section.id, 'quote_author', e.target.value)} placeholder="Quote author..." />
               </div>
             )}
 
             {section.section_type === 'code' && (
               <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium mb-2">Language</label>
-                    <select
-                      value={section.code_language}
-                      onChange={(e) => updateSection(section.id, 'code_language', e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-input bg-background"
-                    >
-                      <option value="javascript">JavaScript</option>
-                      <option value="python">Python</option>
-                      <option value="html">HTML</option>
-                      <option value="css">CSS</option>
-                      <option value="typescript">TypeScript</option>
-                      <option value="bash">Bash</option>
-                      <option value="json">JSON</option>
-                    </select>
-                  </div>
+                <div className="input-wrapper">
+                  <label className="input-label">Language</label>
+                  <select value={section.code_language} onChange={(e) => updateSection(section.id, 'code_language', e.target.value)} className="input">
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="html">HTML</option>
+                    <option value="css">CSS</option>
+                    <option value="typescript">TypeScript</option>
+                    <option value="bash">Bash</option>
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Code</label>
-                  <textarea
-                    value={section.code}
-                    onChange={(e) => updateSection(section.id, 'code', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-input bg-slate-900 text-slate-100 font-mono text-sm resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    rows={8}
-                    placeholder="Paste your code here..."
-                  />
+                <div className="input-wrapper">
+                  <label className="input-label">Code</label>
+                  <textarea value={section.code} onChange={(e) => updateSection(section.id, 'code', e.target.value)} className="w-full px-4 py-3 rounded-xl border border-input bg-slate-900 text-slate-100 font-mono text-sm resize-none" rows={8} placeholder="Paste your code here..." />
                 </div>
               </div>
             )}
 
             {section.section_type === 'video' && (
-              <Input
-                label="Video URL"
-                value={section.video_url}
-                onChange={(e) => updateSection(section.id, 'video_url', e.target.value)}
-                placeholder="https://youtube.com/watch?v=..."
-              />
+              <Input label="Video URL" value={section.video_url} onChange={(e) => updateSection(section.id, 'video_url', e.target.value)} placeholder="https://youtube.com/watch?v=..." />
             )}
 
             {section.section_type === 'cta' && (
               <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Button Text"
-                  value={section.cta_text}
-                  onChange={(e) => updateSection(section.id, 'cta_text', e.target.value)}
-                  placeholder="Learn More"
-                />
-                <Input
-                  label="Button URL"
-                  value={section.cta_url}
-                  onChange={(e) => updateSection(section.id, 'cta_url', e.target.value)}
-                  placeholder="https://..."
-                />
+                <Input label="Button Text" value={section.cta_text} onChange={(e) => updateSection(section.id, 'cta_text', e.target.value)} placeholder="Learn More" />
+                <Input label="Button URL" value={section.cta_url} onChange={(e) => updateSection(section.id, 'cta_url', e.target.value)} placeholder="https://..." />
               </div>
             )}
           </div>
@@ -388,38 +357,26 @@ export default function CreateBlogPage() {
 
   return (
     <div className="animate-fade-in-up">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <Link href="/blogs" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-            <HiOutlineArrowLeft className="w-4 h-4" /> Back
+      {/* Page Header */}
+      <div className="page-header flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <Link href="/blogs" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+            <HiOutlineArrowLeft className="w-4 h-4" /> Back to Blogs
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Create New Blog</h1>
-            <p className="text-sm text-muted-foreground">Add a new blog post to your website</p>
-          </div>
+          <h1 className="page-title mt-2">Create New Blog</h1>
+          <p className="text-muted-foreground">Write and publish a new blog post</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setPreviewMode(!previewMode)}
-          >
+          <Button type="button" variant="secondary" onClick={() => setPreviewMode(!previewMode)}>
             <HiOutlineEye className="w-4 h-4" /> {previewMode ? 'Edit' : 'Preview'}
           </Button>
-          <Button
-            type="button"
-            variant="primary"
-            loading={loading}
-            onClick={handleSubmit}
-          >
-            <HiOutlineSave className="w-4 h-4" /> Save Blog
+          <Button type="button" variant="primary" loading={loading} onClick={handleSubmit} className="shadow-lg shadow-primary/20">
+            <HiOutlineSave className="w-4 h-4" /> Publish
           </Button>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* 3-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* Left Sidebar - Sections Overview */}
@@ -435,7 +392,7 @@ export default function CreateBlogPage() {
 
                   {sections.length > 0 ? (
                     <nav className="space-y-1 max-h-[400px] overflow-y-auto">
-                      {sections.map((s, idx) => {
+                      {sections.map((s) => {
                         const typeInfo = SECTION_TYPES.find(t => t.id === s.section_type) || SECTION_TYPES[0];
                         return (
                           <div
@@ -453,23 +410,17 @@ export default function CreateBlogPage() {
                       })}
                     </nav>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">No sections added yet</p>
+                    <p className="text-sm text-muted-foreground italic">No sections added</p>
                   )}
                 </CardBody>
               </Card>
 
-              {/* Quick Add */}
               <Card className="glass-card bg-gradient-to-br from-primary/5 to-purple-500/5">
                 <CardBody className="p-4">
-                  <h4 className="font-medium mb-3 text-sm">Quick Add Section</h4>
+                  <h4 className="font-medium mb-3 text-sm">Quick Add</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {SECTION_TYPES.slice(0, 4).map(type => (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => addSection(type.id)}
-                        className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-muted/50 transition-colors text-center"
-                      >
+                      <button key={type.id} type="button" onClick={() => addSection(type.id)} className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                         <type.icon className="w-4 h-4 text-primary" />
                         <span className="text-xs">{type.label}</span>
                       </button>
@@ -484,32 +435,13 @@ export default function CreateBlogPage() {
           <main className="lg:col-span-6 space-y-6">
             {/* Banner & Title */}
             <Card className="glass-card">
+              <CardHeader title="Banner & Title" icon={<HiOutlinePhotograph className="w-5 h-5 text-primary" />} />
               <CardBody className="p-6 space-y-4">
-                <h2 className="font-semibold flex items-center gap-2 text-lg">
-                  <HiOutlinePhotograph className="w-5 h-5 text-primary" /> Banner & Title
-                </h2>
-
-                <Input
-                  label="Blog Title *"
-                  value={formData.title}
-                  onChange={(e) => handleChange('title', e.target.value)}
-                  placeholder="Enter blog title..."
-                  required
-                />
+                <Input label="Blog Title *" value={formData.title} onChange={(e) => handleChange('title', e.target.value)} placeholder="Enter blog title..." required />
 
                 <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    label="URL Slug"
-                    value={formData.slug}
-                    onChange={(e) => handleChange('slug', e.target.value)}
-                    placeholder="auto-generated-slug"
-                  />
-                  <Input
-                    label="Banner Title"
-                    value={formData.banner_title}
-                    onChange={(e) => handleChange('banner_title', e.target.value)}
-                    placeholder="Banner overlay text..."
-                  />
+                  <Input label="URL Slug" value={formData.slug} onChange={(e) => handleChange('slug', e.target.value)} placeholder="auto-generated-slug" />
+                  <Input label="Banner Title" value={formData.banner_title} onChange={(e) => handleChange('banner_title', e.target.value)} placeholder="Banner overlay text..." />
                 </div>
 
                 <ImageUpload
@@ -526,51 +458,32 @@ export default function CreateBlogPage() {
                   <div className="relative rounded-xl overflow-hidden aspect-video bg-muted">
                     <img src={formData.banner_image} alt="Banner Preview" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    {formData.banner_title && (
-                      <div className="absolute bottom-4 left-4 text-white text-xl font-bold">{formData.banner_title}</div>
-                    )}
+                    {formData.banner_title && <div className="absolute bottom-4 left-4 text-white text-xl font-bold">{formData.banner_title}</div>}
                   </div>
                 )}
               </CardBody>
             </Card>
 
-            {/* Excerpt & Main Content */}
+            {/* Content */}
             <Card className="glass-card">
+              <CardHeader title="Content" icon={<HiOutlinePencilAlt className="w-5 h-5 text-primary" />} />
               <CardBody className="p-6 space-y-4">
-                <h2 className="font-semibold flex items-center gap-2 text-lg">
-                  <HiOutlinePencilAlt className="w-5 h-5 text-primary" /> Content
-                </h2>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Excerpt / Summary</label>
-                  <textarea
-                    value={formData.excerpt}
-                    onChange={(e) => handleChange('excerpt', e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    rows={3}
-                    placeholder="Brief summary of the blog post..."
-                  />
+                <div className="input-wrapper">
+                  <label className="input-label">Excerpt / Summary</label>
+                  <textarea value={formData.excerpt} onChange={(e) => handleChange('excerpt', e.target.value)} className="input resize-none" rows={3} placeholder="Brief summary..." />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Main Content</label>
-                  <RichTextEditor
-                    value={formData.content}
-                    onChange={(val) => handleChange('content', val)}
-                    placeholder="Start writing your blog content..."
-                    minHeight="300px"
-                  />
+                  <label className="input-label">Main Content</label>
+                  <RichTextEditor value={formData.content} onChange={(val) => handleChange('content', val)} placeholder="Start writing..." minHeight="300px" />
                 </div>
               </CardBody>
             </Card>
 
-            {/* Dynamic Sections */}
-            <Card className="glass-card">
-              <CardBody className="p-6">
-                <h2 className="font-semibold flex items-center gap-2 text-lg mb-4">
-                  <HiOutlineMenuAlt2 className="w-5 h-5 text-primary" /> Content Sections
-                </h2>
-
+            {/* Content Sections */}
+            <Card className="glass-card relative z-10">
+              <CardHeader title="Content Sections" icon={<HiOutlineMenuAlt2 className="w-5 h-5 text-primary" />} />
+              <CardBody className="p-6 overflow-visible">
                 <div className="space-y-4">
                   {sections.map((section) => (
                     <div key={section.id} id={`section-${section.id}`}>
@@ -582,21 +495,15 @@ export default function CreateBlogPage() {
                 </div>
               </CardBody>
             </Card>
-          </main>
 
-          {/* FAQ Section - Full Width or separate? Let's put it in main col */}
-          <main className="lg:col-span-full space-y-6">
+            {/* FAQs */}
             <Card className="glass-card">
+              <CardHeader title="Frequently Asked Questions" icon={<HiOutlineQuestionMarkCircle className="w-5 h-5 text-primary" />} action={
+                <Button type="button" size="sm" variant="outline" onClick={addFaq}>
+                  <HiOutlinePlus className="w-4 h-4 mr-2" /> Add FAQ
+                </Button>
+              } />
               <CardBody className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-semibold flex items-center gap-2 text-lg">
-                    <HiOutlineQuestionMarkCircle className="w-5 h-5 text-primary" /> Frequently Asked Questions
-                  </h2>
-                  <Button type="button" size="sm" variant="outline" onClick={addFaq}>
-                    <HiOutlinePlus className="w-4 h-4 mr-2" /> Add FAQ
-                  </Button>
-                </div>
-
                 <div className="space-y-4">
                   {faqs.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border">
@@ -628,12 +535,12 @@ export default function CreateBlogPage() {
                               onChange={(e) => updateFaq(faq.id, 'question', e.target.value)}
                               placeholder="e.g. What is your return policy?"
                             />
-                            <div>
-                              <label className="block text-sm font-medium mb-2">Answer</label>
+                            <div className="input-wrapper">
+                              <label className="input-label">Answer</label>
                               <textarea
                                 value={faq.answer}
                                 onChange={(e) => updateFaq(faq.id, 'answer', e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                className="input resize-none"
                                 rows={3}
                                 placeholder="Enter the answer..."
                               />
@@ -648,113 +555,63 @@ export default function CreateBlogPage() {
             </Card>
           </main>
 
-
           {/* Right Sidebar - Settings */}
           <aside className="lg:col-span-3">
             <div className="sticky top-20 space-y-4">
               {/* Publish Settings */}
               <Card className="glass-card">
+                <CardHeader title="Publish" icon={<HiOutlineGlobe className="w-5 h-5 text-primary" />} />
                 <CardBody className="p-4 space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2 pb-2 border-b border-border">
-                    <HiOutlineGlobe className="w-5 h-5 text-primary" /> Publish
-                  </h3>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Status</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => handleChange('status', e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-input bg-background"
-                    >
+                  <div className="input-wrapper">
+                    <label className="input-label">Status</label>
+                    <select value={formData.status} onChange={(e) => handleChange('status', e.target.value)} className="input">
                       <option value="draft">Draft</option>
                       <option value="published">Published</option>
                       <option value="scheduled">Scheduled</option>
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Publish Date</label>
-                    <input
-                      type="date"
-                      value={formData.blog_date}
-                      onChange={(e) => handleChange('blog_date', e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-input bg-background"
-                    />
+                  <div className="input-wrapper">
+                    <label className="input-label">Publish Date</label>
+                    <input type="date" value={formData.blog_date} onChange={(e) => handleChange('blog_date', e.target.value)} className="input" />
                   </div>
 
                   <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_featured}
-                      onChange={(e) => handleChange('is_featured', e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm">Featured Post</span>
+                    <input type="checkbox" checked={formData.is_featured} onChange={(e) => handleChange('is_featured', e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-primary" />
+                    <span className="text-sm flex items-center gap-2"><HiOutlineSparkles className="w-4 h-4 text-amber-500" /> Featured Post</span>
                   </label>
                 </CardBody>
               </Card>
 
-              {/* Category & Author */}
+              {/* Organization */}
               <Card className="glass-card">
+                <CardHeader title="Organization" icon={<HiOutlineFolder className="w-5 h-5 text-primary" />} />
                 <CardBody className="p-4 space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2 pb-2 border-b border-border">
-                    <HiOutlineFolder className="w-5 h-5 text-primary" /> Organization
-                  </h3>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Category</label>
-                    <select
-                      value={formData.category_id}
-                      onChange={(e) => handleChange('category_id', e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-input bg-background"
-                    >
+                  <div className="input-wrapper">
+                    <label className="input-label">Category</label>
+                    <select value={formData.category_id} onChange={(e) => handleChange('category_id', e.target.value)} className="input">
                       <option value="">Select category...</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
+                      {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Author</label>
-                    <select
-                      value={formData.author_id}
-                      onChange={(e) => handleChange('author_id', e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-input bg-background"
-                    >
+                  <div className="input-wrapper">
+                    <label className="input-label">Author</label>
+                    <select value={formData.author_id} onChange={(e) => handleChange('author_id', e.target.value)} className="input">
                       <option value="">Select author...</option>
-                      {authors.map(author => (
-                        <option key={author.id} value={author.id}>
-                          {author.display_name || `Author ${author.id}`}
-                        </option>
-                      ))}
+                      {authors.map(author => <option key={author.id} value={author.id}>{author.display_name || `Author ${author.id}`}</option>)}
                     </select>
                   </div>
 
-                  <Input
-                    label="Tags"
-                    value={formData.tags}
-                    onChange={(e) => handleChange('tags', e.target.value)}
-                    placeholder="react, nextjs, web (comma-separated)"
-                  />
-
-                  <Input
-                    label="Read Time (minutes)"
-                    type="number"
-                    value={formData.read_time}
-                    onChange={(e) => handleChange('read_time', e.target.value)}
-                    placeholder="5"
-                  />
+                  <Input label="Tags" value={formData.tags} onChange={(e) => handleChange('tags', e.target.value)} placeholder="react, nextjs (comma-separated)" />
+                  <Input label="Read Time (minutes)" type="number" value={formData.read_time} onChange={(e) => handleChange('read_time', e.target.value)} placeholder="5" />
                 </CardBody>
               </Card>
 
               {/* Featured Image */}
               <Card className="glass-card">
-                <CardBody className="p-4 space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2 pb-2 border-b border-border">
-                    <HiOutlinePhotograph className="w-5 h-5 text-primary" /> Thumbnail
-                  </h3>
-
+                <CardHeader title="Thumbnail" icon={<HiOutlinePhotograph className="w-5 h-5 text-primary" />} />
+                <CardBody className="p-4">
                   <ImageUpload
                     label="Featured Image"
                     value={formData.featured_image}
@@ -766,37 +623,16 @@ export default function CreateBlogPage() {
                 </CardBody>
               </Card>
 
-              {/* SEO Settings */}
+              {/* SEO */}
               <Card className="glass-card">
+                <CardHeader title="SEO" icon={<HiOutlineGlobe className="w-5 h-5 text-primary" />} />
                 <CardBody className="p-4 space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2 pb-2 border-b border-border">
-                    <HiOutlineGlobe className="w-5 h-5 text-primary" /> SEO
-                  </h3>
-
-                  <Input
-                    label="Meta Title"
-                    value={formData.meta_title}
-                    onChange={(e) => handleChange('meta_title', e.target.value)}
-                    placeholder="SEO title..."
-                  />
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Meta Description</label>
-                    <textarea
-                      value={formData.meta_description}
-                      onChange={(e) => handleChange('meta_description', e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      rows={3}
-                      placeholder="SEO description..."
-                    />
+                  <Input label="Meta Title" value={formData.meta_title} onChange={(e) => handleChange('meta_title', e.target.value)} placeholder="SEO title..." />
+                  <div className="input-wrapper">
+                    <label className="input-label">Meta Description</label>
+                    <textarea value={formData.meta_description} onChange={(e) => handleChange('meta_description', e.target.value)} className="input resize-none" rows={3} placeholder="SEO description..." />
                   </div>
-
-                  <Input
-                    label="Meta Keywords"
-                    value={formData.meta_keywords}
-                    onChange={(e) => handleChange('meta_keywords', e.target.value)}
-                    placeholder="keyword1, keyword2..."
-                  />
+                  <Input label="Meta Keywords" value={formData.meta_keywords} onChange={(e) => handleChange('meta_keywords', e.target.value)} placeholder="keyword1, keyword2..." />
                 </CardBody>
               </Card>
             </div>
