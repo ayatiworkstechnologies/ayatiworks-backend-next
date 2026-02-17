@@ -245,9 +245,9 @@ export default function MetaAdsPage() {
     const handleSync = async () => {
         try {
             setSyncing(true);
-            const configParams = isAdmin() && selectedClientId ? { params: { client_id: selectedClientId } } : {};
-            await api.post('/meta/sync', {}, configParams);
-            toast.success("Synchronization simulated successfully!");
+            const params = isAdmin() && selectedClientId ? `?client_id=${selectedClientId}` : '';
+            const res = await api.post(`/meta/sync${params}`);
+            toast.success(res?.message || "Synchronization completed successfully!");
             loadData(); // Reload all
         } catch (error) {
             toast.error("Sync failed. Check settings.");
@@ -294,7 +294,7 @@ export default function MetaAdsPage() {
                                 <option value="" disabled className="bg-slate-800 text-muted-foreground">Select Client</option>
                                 {clients.map(client => (
                                     <option key={client.id} value={client.id} className="bg-slate-800 text-foreground">
-                                        {client.name}
+                                        {client.first_name} {client.last_name || ''}
                                     </option>
                                 ))}
                             </select>

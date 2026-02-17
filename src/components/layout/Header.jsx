@@ -103,7 +103,7 @@ function Header({ onMenuToggle }) {
         <div className="relative" ref={notificationsRef}>
           <button
             onClick={handleToggleNotifications}
-            className={`relative p-2.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 ${showNotifications ? 'text-blue-600 bg-blue-50' : ''}`}
+            className={`relative p-2.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all duration-200 ${showNotifications ? 'text-primary bg-primary/10' : ''}`}
             aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
             aria-expanded={showNotifications}
             aria-haspopup="true"
@@ -115,29 +115,29 @@ function Header({ onMenuToggle }) {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden animation-fade-in-up z-50">
-              <div className="flex items-center justify-between p-4 border-b border-gray-50">
-                <h3 className="font-semibold text-gray-900">Notifications</h3>
-                <button className="text-xs font-medium text-blue-600 hover:text-blue-700" aria-label="Mark all notifications as read">Mark all read</button>
+            <div className="absolute right-0 mt-3 w-80 bg-card rounded-2xl shadow-xl shadow-black/10 border border-border/50 overflow-hidden animation-fade-in-up z-50">
+              <div className="flex items-center justify-between p-4 border-b border-border/50">
+                <h3 className="font-semibold text-foreground">Notifications</h3>
+                <button className="text-xs font-medium text-primary hover:text-primary/80" aria-label="Mark all notifications as read">Mark all read</button>
               </div>
               <div className="max-h-[300px] overflow-y-auto">
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors ${notification.unread ? 'bg-blue-50/30' : ''}`}
+                    className={`p-4 hover:bg-muted/50 cursor-pointer border-b border-border/30 last:border-0 transition-colors ${notification.unread ? 'bg-primary/5' : ''}`}
                   >
                     <div className="flex justify-between items-start gap-3">
-                      <p className="text-sm font-medium text-gray-900 leading-snug">{notification.title}</p>
-                      {notification.unread && <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>}
+                      <p className="text-sm font-medium text-foreground leading-snug">{notification.title}</p>
+                      {notification.unread && <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"></span>}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
                       <HiOutlineClock className="w-3.5 h-3.5" />
                       {notification.time}
                     </p>
                   </div>
                 ))}
               </div>
-              <Link href="/notifications" className="block p-3 text-center text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors border-t border-gray-50">
+              <Link href="/notifications" className="block p-3 text-center text-sm font-medium text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors border-t border-border/30">
                 View All Notifications
               </Link>
             </div>

@@ -8,7 +8,9 @@
 import { useMemo } from 'react';
 import { Card, CardHeader, CardBody, StatusBadge, PageHeader } from '@/components/ui';
 import { QuickActionsGrid, RecentActivityWidget, StatsGrid } from './DashboardWidgets';
-import { useDashboardStats, useRecentActivity, useQuickActions } from '@/hooks/useDashboardData';
+
+import { RevenueChart, ProjectDistributionChart } from './DashboardCharts';
+import { useDashboardStats, useRecentActivity, useQuickActions, useDashboardCharts } from '@/hooks/useDashboardData';
 import {
     HiOutlineOfficeBuilding, HiOutlineUsers, HiOutlineFolder,
     HiOutlineShieldCheck
@@ -16,6 +18,7 @@ import {
 
 export default function SuperAdminDashboard({ user }) {
     const { data: dashboardData, isLoading: statsLoading } = useDashboardStats();
+    const { data: chartData, isLoading: chartsLoading } = useDashboardCharts();
     const { data: activities } = useRecentActivity(10);
     const { data: quickActions } = useQuickActions();
 
@@ -68,6 +71,12 @@ export default function SuperAdminDashboard({ user }) {
 
             {/* Quick Actions */}
             <QuickActionsGrid actions={quickActions} />
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <RevenueChart data={chartData?.revenue_trend} />
+                <ProjectDistributionChart data={chartData?.project_distribution} />
+            </div>
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

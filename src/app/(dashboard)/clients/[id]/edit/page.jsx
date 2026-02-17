@@ -1,44 +1,67 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Card, CardHeader, CardBody, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 import api from '@/lib/api';
+import { useAPI } from '@/hooks/useAPI';
 import { useToast } from '@/context/ToastContext';
-import { HiOutlineArrowLeft, HiOutlineCheck, HiOutlineMail, HiOutlinePhone, HiOutlineGlobe } from 'react-icons/hi';
+import {
+  HiOutlineCheck, HiOutlineMail, HiOutlinePhone, HiOutlineUser,
+  HiOutlineOfficeBuilding
+} from 'react-icons/hi';
 
 export default function EditClientPage() {
   const { id } = useParams();
   const router = useRouter();
   const toast = useToast();
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', website: '', industry: '', address: '', description: '',
+  const [formData, setFormData] = useState(null);
+
+  // SWR-cached dropdown data
+  const { data: deptRes } = useAPI('/organizations/departments', { dedupingInterval: 60000 });
+  const { data: desigRes } = useAPI('/organizations/designations', { dedupingInterval: 60000 });
+
+  const departments = useMemo(() => deptRes?.items || deptRes || [], [deptRes]);
+  const designations = useMemo(() => desigRes?.items || desigRes || [], [desigRes]);
+
+  // SWR-cached client data — populates the form on first load
+  const { isLoading } = useAPI(`/clients/${id}`, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+    onSuccess: (data) => {
+      if (!formData) {
+        setFormData({
+          first_name: data.first_name || '',
+          last_name: data.last_name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          department_id: data.department_id || '',
+          designation_id: data.designation_id || '',
+          status: data.status || (data.is_active ? 'active' : 'inactive'),
+          company_name: data.company_name || '',
+          industry: data.industry || '',
+          address: data.address || '',
+        });
+      }
+    },
+    onError: () => {
+      toast.error('Failed to load client data');
+    },
   });
 
-  useEffect(() => { fetchClient(); }, [id]);
-
-  const fetchClient = async () => {
-    try {
-      const data = await api.get(`/clients/${id}`);
-      setFormData({
-        name: data.name || '', email: data.email || '', phone: data.phone || '', website: data.website || '',
-        industry: data.industry || '',
-        company_size: data.company_size || '',
-        annual_revenue: data.annual_revenue || '',
-        tax_id: data.tax_id || '',
-        address: data.address || '', description: data.description || '',
-      });
-    } catch (error) {
-      toast.error('Failed to load client data');
-    } finally {
-      setLoading(false);
+  // Filter designations by department
+  const filteredDesignations = useMemo(() => {
+    if (formData?.department_id) {
+      return designations.filter(d =>
+        !d.department_id || d.department_id === parseInt(formData.department_id)
+      );
     }
-  };
+    return designations;
+  }, [formData?.department_id, designations]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,7 +71,7 @@ export default function EditClientPage() {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Company name is required';
+    if (!formData.first_name.trim()) newErrors.first_name = 'First name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format';
     setErrors(newErrors);
@@ -60,14 +83,18 @@ export default function EditClientPage() {
     if (!validate()) { toast.error('Please fix the validation errors'); return; }
     setSaving(true);
     try {
-      // Create payload with proper types
-      const payload = {
-        ...formData,
-        annual_revenue: formData.annual_revenue ? Number(formData.annual_revenue) : null
-      };
+      const payload = { ...formData };
+      ['department_id', 'designation_id'].forEach(field => {
+        if (payload[field] === '' || payload[field] === undefined) {
+          payload[field] = null;
+        } else if (payload[field]) {
+          payload[field] = parseInt(payload[field], 10);
+        }
+      });
+
       await api.put(`/clients/${id}`, payload);
       toast.success('Client updated successfully');
-      setTimeout(() => router.push(`/clients/${id}`), 1500);
+      setTimeout(() => router.push(`/clients/${id}`), 1000);
     } catch (error) {
       toast.error(error.message || 'Failed to update client');
     } finally {
@@ -75,25 +102,44 @@ export default function EditClientPage() {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
+  if (isLoading || !formData) return (
+    <div className="space-y-6 max-w-3xl mx-auto">
+      <div className="h-8 w-48 bg-muted/20 rounded animate-pulse" />
+      <Card><CardBody className="h-48 animate-pulse bg-muted/10" /></Card>
+      <Card><CardBody className="h-32 animate-pulse bg-muted/10" /></Card>
+    </div>
+  );
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-3xl mx-auto animate-fade-in-up">
       <PageHeader
         title="Edit Client"
-        description={`Update details for ${formData.name || 'client'}`}
+        description={`Update details for ${formData.first_name} ${formData.last_name}`.trim()}
         backLink={`/clients/${id}`}
         backText="Back to Client"
       />
 
       <form onSubmit={handleSubmit}>
+        {/* Personal Info */}
         <Card className="mb-6">
-          <CardHeader title="Company Details" />
+          <CardHeader title="Personal Information" />
           <CardBody className="space-y-4">
-            <div className="input-wrapper">
-              <label className="input-label">Company Name <span className="text-red-500">*</span></label>
-              <input type="text" name="name" value={formData.name} onChange={handleChange} className={`input ${errors.name ? 'input-error' : ''}`} />
-              {errors.name && <p className="error-message">{errors.name}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="First Name"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleChange}
+                error={errors.first_name}
+                required
+                icon={<HiOutlineUser className="w-5 h-5" />}
+              />
+              <Input
+                label="Last Name"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleChange}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -113,13 +159,54 @@ export default function EditClientPage() {
                 </div>
               </div>
             </div>
+          </CardBody>
+        </Card>
 
+        {/* Organization */}
+        <Card className="mb-6">
+          <CardHeader title="Organization" />
+          <CardBody className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="input-wrapper">
-                <label className="input-label">Website</label>
+                <label className="input-label">Department</label>
+                <select name="department_id" value={formData.department_id} onChange={handleChange} className="input">
+                  <option value="">Select Department</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="input-wrapper">
+                <label className="input-label">Designation</label>
+                <select name="designation_id" value={formData.designation_id} onChange={handleChange} className="input">
+                  <option value="">Select Designation</option>
+                  {filteredDesignations.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="input-wrapper">
+              <label className="input-label">Status</label>
+              <select name="status" value={formData.status} onChange={handleChange} className="input">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Company Info */}
+        <Card className="mb-6">
+          <CardHeader title="Company Details (Optional)" />
+          <CardBody className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="input-wrapper">
+                <label className="input-label">Company Name</label>
                 <div className="relative">
-                  <HiOutlineGlobe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input type="url" name="website" value={formData.website} onChange={handleChange} className="input pl-10" />
+                  <HiOutlineOfficeBuilding className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} className="input pl-10" />
                 </div>
               </div>
               <div className="input-wrapper">
@@ -132,33 +219,10 @@ export default function EditClientPage() {
                   <option value="Retail">Retail</option>
                   <option value="Manufacturing">Manufacturing</option>
                   <option value="Consulting">Consulting</option>
+                  <option value="Education">Education</option>
+                  <option value="Real Estate">Real Estate</option>
                   <option value="Other">Other</option>
                 </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="input-wrapper">
-                <label className="input-label">Company Size</label>
-                <select name="company_size" value={formData.company_size} onChange={handleChange} className="input">
-                  <option value="">Select size</option>
-                  <option value="1-10">1-10 Employees</option>
-                  <option value="11-50">11-50 Employees</option>
-                  <option value="51-200">51-200 Employees</option>
-                  <option value="201-500">201-500 Employees</option>
-                  <option value="500+">500+ Employees</option>
-                </select>
-              </div>
-              <div className="input-wrapper">
-                <label className="input-label">Annual Revenue</label>
-                <input type="number" name="annual_revenue" value={formData.annual_revenue} onChange={handleChange} placeholder="e.g. 1000000" className="input" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="input-wrapper">
-                <label className="input-label">Tax ID / VAT</label>
-                <input type="text" name="tax_id" value={formData.tax_id} onChange={handleChange} placeholder="Tax Identification Number" className="input" />
               </div>
             </div>
 
@@ -166,16 +230,12 @@ export default function EditClientPage() {
               <label className="input-label">Address</label>
               <textarea name="address" value={formData.address} onChange={handleChange} className="input min-h-[80px]" />
             </div>
-            <div className="input-wrapper">
-              <label className="input-label">Description</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} className="input min-h-[80px]" />
-            </div>
           </CardBody>
         </Card>
 
         <div className="flex gap-3">
           <Button type="button" variant="secondary" onClick={() => router.back()} className="flex-1">Cancel</Button>
-          <Button type="submit" variant="primary" loading={saving} className="flex-1"><HiOutlineCheck className="w-4 h-4" /> Save Changes</Button>
+          <Button type="submit" variant="primary" loading={saving} className="flex-1 shadow-lg shadow-primary/20"><HiOutlineCheck className="w-4 h-4" /> Save Changes</Button>
         </div>
       </form>
     </div>

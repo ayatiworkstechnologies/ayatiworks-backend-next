@@ -1,47 +1,26 @@
 /**
- * Custom hook for fetching role-based dashboard data
+ * Custom hook for fetching role-based dashboard data.
+ * Uses the consolidated useAPI hook with production-tuned intervals.
  */
 
-import useSWR from 'swr';
-import api from '@/lib/api';
+import { useAPI } from './useAPI';
 
 /**
- * Fetch dashboard stats based on user's role
+ * Fetch dashboard stats (auto-refreshes every 30s)
  */
 export function useDashboardStats() {
-  const { data, error, isLoading, mutate } = useSWR(
-    '/dashboard/stats',
-    async (url) => {
-      const response = await api.get(url);
-      return response;
-    },
-    {
-      refreshInterval: 10000, // Refresh every 10 seconds
-      revalidateOnFocus: true,
-    }
-  );
-
-  return {
-    data,
-    error,
-    isLoading,
-    mutate,
-  };
+  return useAPI('/dashboard/stats', {
+    refreshInterval: 30000,
+  });
 }
 
 /**
- * Fetch recent dashboard activity
+ * Fetch recent dashboard activity (auto-refreshes every 60s)
  */
 export function useRecentActivity(limit = 10) {
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading } = useAPI(
     `/dashboard/recent-activity?limit=${limit}`,
-    async (url) => {
-      const response = await api.get(url);
-      return response;
-    },
-    {
-      refreshInterval: 15000, // Refresh every 15 seconds
-    }
+    { refreshInterval: 60000 }
   );
 
   return {
@@ -52,24 +31,33 @@ export function useRecentActivity(limit = 10) {
 }
 
 /**
- * Fetch quick actions based on user's role
+ * Fetch quick actions (no auto-refresh, fetched once)
  */
 export function useQuickActions() {
-  const { data, error, isLoading } = useSWR(
-    '/dashboard/quick-actions',
-    async (url) => {
-      const response = await api.get(url);
-      return response;
-    },
-    {
-      revalidateOnMount: true,
-      revalidateOnFocus: false,
-    }
-  );
+  const { data, error, isLoading } = useAPI('/dashboard/quick-actions', {
+    revalidateOnMount: true,
+    revalidateOnFocus: false,
+  });
 
   return {
     data: data || [],
     error,
     isLoading,
+  };
+}
+
+/**
+ * Fetch dashboard charts data (no auto-refresh — user triggers)
+ */
+export function useDashboardCharts() {
+  const { data, error, isLoading, mutate } = useAPI('/dashboard/charts', {
+    revalidateOnFocus: false,
+  });
+
+  return {
+    data: data || {},
+    error,
+    isLoading,
+    refresh: mutate,
   };
 }

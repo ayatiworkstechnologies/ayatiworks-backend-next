@@ -8,7 +8,9 @@
 import { useMemo } from 'react';
 import { Card, CardHeader, CardBody, StatusBadge, PageHeader } from '@/components/ui';
 import { QuickActionsGrid, RecentActivityWidget, StatsGrid } from './DashboardWidgets';
-import { useDashboardStats, useRecentActivity, useQuickActions } from '@/hooks/useDashboardData';
+
+import { TaskCompletionChart } from './DashboardCharts';
+import { useDashboardStats, useRecentActivity, useQuickActions, useDashboardCharts } from '@/hooks/useDashboardData';
 import {
     HiOutlineUsers, HiOutlineFolder, HiOutlineClipboardCheck,
     HiOutlineChartBar
@@ -16,6 +18,7 @@ import {
 
 export default function ManagerDashboard({ user }) {
     const { data: dashboardData, isLoading: statsLoading } = useDashboardStats();
+    const { data: chartData, isLoading: chartsLoading } = useDashboardCharts();
     const { data: activities } = useRecentActivity(10);
     const { data: quickActions } = useQuickActions();
 
@@ -68,6 +71,11 @@ export default function ManagerDashboard({ user }) {
 
             {/* Quick Actions */}
             <QuickActionsGrid actions={quickActions} />
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+                <TaskCompletionChart data={chartData?.task_completion} title="Team Task Completion (7 Days)" />
+            </div>
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

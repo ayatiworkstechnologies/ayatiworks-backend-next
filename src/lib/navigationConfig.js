@@ -19,6 +19,8 @@ import {
   HiOutlineShieldCheck,
   HiOutlineBell,
   HiOutlineDocumentText,
+  HiOutlineMail,
+  HiOutlineTemplate,
 } from 'react-icons/hi';
 
 /**
@@ -136,12 +138,25 @@ export const navigationContext = [
         iconComponent: HiOutlineUserGroup,
         permission: 'lead.view',
       },
+
       {
         title: 'Meta Ads',
         href: '/meta-ads',
         iconComponent: HiOutlineChartBar,
         permission: 'meta.view',
       },
+    ]
+  },
+  {
+    group: 'Client Portal',
+    items: [
+      {
+        title: 'My Portal',
+        href: '/my-portal',
+        iconComponent: HiOutlineOfficeBuilding,
+        anyRole: ['Client'],
+      },
+
     ]
   },
   {

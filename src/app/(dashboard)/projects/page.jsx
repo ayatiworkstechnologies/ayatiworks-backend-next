@@ -1,18 +1,19 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardBody, StatCard, StatusBadge, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
 import api from '@/lib/api';
+import { useAPI } from '@/hooks/useAPI';
 import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
 import {
   HiOutlinePlus, HiOutlineViewGrid, HiOutlineViewList, HiOutlineBriefcase,
   HiOutlineChartBar, HiOutlineCheckCircle, HiOutlinePause, HiOutlinePlay,
-  HiOutlineEye, HiOutlinePencil, HiOutlineTrash
+  HiOutlineEye, HiOutlinePencil, HiOutlineTrash, HiOutlineRefresh
 } from 'react-icons/hi';
 
 // Memoized Project Card Component
@@ -69,45 +70,25 @@ ProjectCard.displayName = 'ProjectCard';
 export default function ProjectsPage() {
   const { user } = useAuth();
   const toast = useToast();
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [view, setView] = useState('grid');
   const [deleteModal, setDeleteModal] = useState({ open: false, project: null });
   const [deleting, setDeleting] = useState(false);
-  const [stats, setStats] = useState({ total: 0, active: 0, completed: 0, onHold: 0 });
 
-  // Memoize fetch functions with useCallback
-  const fetchStats = useCallback(async () => {
-    try {
-      const response = await api.get('/dashboard/project-overview');
-      const byStatus = response.by_status || {};
-      setStats({
-        total: response.total || 0,
-        active: byStatus['in_progress'] || 0,
-        completed: byStatus['completed'] || 0,
-        onHold: byStatus['on_hold'] || 0
-      });
-    } catch (error) {
-      console.error('Error fetching project stats:', error);
-    }
-  }, []);
+  // SWR — Projects list (cached, instant back-nav)
+  const { data: projectsData, isLoading: loading, mutate: refreshProjects } = useAPI('/projects');
+  const projects = useMemo(() => projectsData?.items || projectsData || [], [projectsData]);
 
-  const fetchProjects = useCallback(async () => {
-    try {
-      const response = await api.get('/projects');
-      setProjects(response.items || response || []);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      setProjects([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProjects();
-    fetchStats();
-  }, [fetchProjects, fetchStats]);
+  // SWR — Project overview stats (cached)
+  const { data: overviewData, mutate: refreshStats } = useAPI('/dashboard/project-overview');
+  const stats = useMemo(() => {
+    const byStatus = overviewData?.by_status || {};
+    return {
+      total: overviewData?.total || 0,
+      active: byStatus['in_progress'] || 0,
+      completed: byStatus['completed'] || 0,
+      onHold: byStatus['on_hold'] || 0,
+    };
+  }, [overviewData]);
 
   const handleDelete = useCallback((project) => {
     setDeleteModal({ open: true, project });
@@ -120,14 +101,14 @@ export default function ProjectsPage() {
       await api.delete(`/projects/${deleteModal.project.id}`);
       toast.success('Project deleted successfully');
       setDeleteModal({ open: false, project: null });
-      fetchProjects();
-      fetchStats();
+      refreshProjects();
+      refreshStats();
     } catch (error) {
       toast.error(error.message || 'Failed to delete project');
     } finally {
       setDeleting(false);
     }
-  }, [deleteModal.project, toast, fetchProjects, fetchStats]);
+  }, [deleteModal.project, toast, refreshProjects, refreshStats]);
 
   const isAdmin = ['admin', 'manager', 'super_admin'].includes(user?.role?.code?.toLowerCase());
 
@@ -139,7 +120,14 @@ export default function ProjectsPage() {
         description="Manage your projects and track progress"
       >
         <div className="flex items-center gap-3">
-          <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl border border-border/50 shadow-sm">
+          <button
+            onClick={() => refreshProjects()}
+            className="p-2 rounded-lg border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+            title="Refresh"
+          >
+            <HiOutlineRefresh className="w-5 h-5" />
+          </button>
+          <div className="flex bg-card p-1 rounded-xl border border-border/50 shadow-sm">
             <button
               className={`p-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-all ${view === 'grid' ? 'bg-primary/10 text-primary shadow-sm' : 'text-muted-foreground hover:bg-muted'}`}
               onClick={() => setView('grid')}
@@ -175,20 +163,32 @@ export default function ProjectsPage() {
       {
         loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <Card key={i}>
                 <CardBody className="space-y-3">
-                  <div className="h-4 w-3/4 bg-muted/30 rounded animate-pulse" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-muted/30 animate-pulse" />
+                    <div className="flex-1">
+                      <div className="h-4 w-3/4 bg-muted/30 rounded animate-pulse mb-1" />
+                      <div className="h-3 w-1/3 bg-muted/20 rounded animate-pulse" />
+                    </div>
+                  </div>
                   <div className="h-3 w-1/2 bg-muted/20 rounded animate-pulse" />
-                  <div className="h-2 w-full bg-muted/20 rounded animate-pulse" />
+                  <div className="h-2 w-full bg-muted/20 rounded-full animate-pulse" />
+                  <div className="flex justify-between pt-2 border-t border-border/30">
+                    <div className="h-3 w-16 bg-muted/20 rounded animate-pulse" />
+                    <div className="h-3 w-16 bg-muted/20 rounded animate-pulse" />
+                  </div>
                 </CardBody>
               </Card>
             ))}
           </div>
         ) : projects.length === 0 ? (
-          <div className="text-center p-12 glass-card border-2 border-dashed border-border/50">
-            <HiOutlineBriefcase className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-foreground">No Projects Found</h3>
+          <div className="flex flex-col items-center justify-center py-20 bg-muted/5 rounded-2xl border-2 border-dashed border-border/50">
+            <div className="w-20 h-20 bg-muted/20 rounded-full flex items-center justify-center mb-6">
+              <HiOutlineBriefcase className="w-10 h-10 text-muted-foreground/40" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground mb-2">No Projects Found</h3>
             <p className="text-muted-foreground mb-6">Create your first project to get started.</p>
             {isAdmin && <Link href="/projects/new"><Button variant="primary">Create Project</Button></Link>}
           </div>

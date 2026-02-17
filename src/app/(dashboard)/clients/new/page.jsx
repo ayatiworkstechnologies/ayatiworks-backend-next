@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Card, CardHeader, CardBody, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import api from '@/lib/api';
+import { useAPI } from '@/hooks/useAPI';
 import { useToast } from '@/context/ToastContext';
 import {
-  HiOutlineOfficeBuilding, HiOutlineMail,
-  HiOutlinePhone, HiOutlineGlobe, HiOutlineUser, HiOutlineCheck
+  HiOutlineUser, HiOutlineMail, HiOutlinePhone,
+  HiOutlineOfficeBuilding, HiOutlineCheck, HiOutlineKey
 } from 'react-icons/hi';
 
 export default function CreateClientPage() {
@@ -18,22 +18,37 @@ export default function CreateClientPage() {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // SWR-cached dropdown data — shared across create/edit pages
+  const { data: deptRes } = useAPI('/organizations/departments', { dedupingInterval: 60000 });
+  const { data: desigRes } = useAPI('/organizations/designations', { dedupingInterval: 60000 });
+
+  const departments = useMemo(() => deptRes?.items || deptRes || [], [deptRes]);
+  const designations = useMemo(() => desigRes?.items || desigRes || [], [desigRes]);
+
   const [formData, setFormData] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
+    password: '',
     phone: '',
-    website: '',
+    department_id: '',
+    designation_id: '',
+    joining_date: new Date().toISOString().split('T')[0],
+    company_name: '',
     industry: '',
-    company_size: '',
-    annual_revenue: '',
-    tax_id: '',
     address: '',
-    description: '',
-    contact_name: '',
-    contact_email: '',
-    contact_phone: '',
-    contact_designation: '',
   });
+
+  // Filter designations by department
+  const filteredDesignations = useMemo(() => {
+    if (formData.department_id) {
+      return designations.filter(d =>
+        !d.department_id || d.department_id === parseInt(formData.department_id)
+      );
+    }
+    return designations;
+  }, [formData.department_id, designations]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -43,9 +58,12 @@ export default function CreateClientPage() {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Company name is required';
+    if (!formData.first_name.trim()) newErrors.first_name = 'First name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format';
+    if (!formData.password) newErrors.password = 'Password is required';
+    else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    if (!formData.joining_date) newErrors.joining_date = 'Joining date is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -59,35 +77,21 @@ export default function CreateClientPage() {
 
     setLoading(true);
     try {
-      // Construct payload matching backend schema
-      const payload = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        website: formData.website,
-        industry: formData.industry,
-        company_size: formData.company_size,
-        // Convert empty string to null or number
-        annual_revenue: formData.annual_revenue ? Number(formData.annual_revenue) : null,
-        tax_id: formData.tax_id,
-        address: formData.address,
-        description: formData.description,
-        contacts: formData.contact_name ? [{
-          name: formData.contact_name,
-          email: formData.contact_email,
-          phone: formData.contact_phone,
-          designation: formData.contact_designation,
-          is_primary: true
-        }] : []
-      };
+      const cleanData = { ...formData };
+      ['department_id', 'designation_id'].forEach(field => {
+        if (cleanData[field] === '' || cleanData[field] === undefined) {
+          cleanData[field] = null;
+        } else if (cleanData[field]) {
+          cleanData[field] = parseInt(cleanData[field], 10);
+        }
+      });
 
-      await api.post('/clients', payload);
+      await api.post('/clients', cleanData);
       toast.success('Client created successfully!');
-      setTimeout(() => router.push('/clients'), 1500);
+      setTimeout(() => router.push('/clients'), 1000);
     } catch (error) {
-      console.error('Error creating client:', error);
       if (error.detail && Array.isArray(error.detail)) {
-        error.detail.forEach(err => toast.error(`${err.field}: ${err.message}`));
+        error.detail.forEach(err => toast.error(`${err.field || 'Error'}: ${err.message || err.msg}`));
       } else {
         toast.error(error.message || 'Failed to create client');
       }
@@ -97,46 +101,137 @@ export default function CreateClientPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-3xl mx-auto animate-fade-in-up">
       <PageHeader
         title="Add New Client"
-        description="Create a new client profile"
+        description="Create a new client with employee profile"
         backLink="/clients"
         backText="Back to Clients"
       />
 
       <form onSubmit={handleSubmit}>
+        {/* Personal Information */}
         <Card className="mb-6">
-          <CardHeader title="Company Details" />
+          <CardHeader title="Personal Information" />
           <CardBody className="space-y-4">
-            <div className="input-wrapper">
-              <label className="input-label">Company Name <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <HiOutlineOfficeBuilding className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="e.g., ABC Corporation" className={`input pl-10 ${errors.name ? 'input-error' : ''}`} />
-              </div>
-              {errors.name && <p className="error-message">{errors.name}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="First Name"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleChange}
+                error={errors.first_name}
+                required
+                icon={<HiOutlineUser className="w-5 h-5" />}
+                placeholder="Enter first name"
+              />
+              <Input
+                label="Last Name"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleChange}
+                placeholder="Enter last name"
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Email"
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                error={errors.email}
+                required
+                icon={<HiOutlineMail className="w-5 h-5" />}
+                placeholder="client@company.com"
+              />
+              <Input
+                label="Password"
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                error={errors.password}
+                required
+                icon={<HiOutlineKey className="w-5 h-5" />}
+                placeholder="Minimum 8 characters"
+              />
+            </div>
+
+            <Input
+              label="Phone"
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              icon={<HiOutlinePhone className="w-5 h-5" />}
+              placeholder="+1 234 567 8900"
+            />
+          </CardBody>
+        </Card>
+
+        {/* Organization */}
+        <Card className="mb-6">
+          <CardHeader title="Organization" />
+          <CardBody className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="input-wrapper">
-                <label className="input-label">Email <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <HiOutlineMail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="contact@company.com" className={`input pl-10 ${errors.email ? 'input-error' : ''}`} />
-                </div>
-                {errors.email && <p className="error-message">{errors.email}</p>}
+                <label className="input-label">Department</label>
+                <select
+                  name="department_id"
+                  value={formData.department_id}
+                  onChange={handleChange}
+                  className="input"
+                >
+                  <option value="">Select Department (Optional)</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
               </div>
+
               <div className="input-wrapper">
-                <label className="input-label">Phone</label>
-                <div className="relative">
-                  <HiOutlinePhone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="+1 234 567 8900" className="input pl-10" />
-                </div>
+                <label className="input-label">Designation</label>
+                <select
+                  name="designation_id"
+                  value={formData.designation_id}
+                  onChange={handleChange}
+                  className="input"
+                >
+                  <option value="">Select Designation (Optional)</option>
+                  {filteredDesignations.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
+            <Input
+              label="Joining Date"
+              type="date"
+              name="joining_date"
+              value={formData.joining_date}
+              onChange={handleChange}
+              error={errors.joining_date}
+              required
+            />
+          </CardBody>
+        </Card>
+
+        {/* Company Info (Optional CRM) */}
+        <Card className="mb-6">
+          <CardHeader title="Company Details (Optional)" />
+          <CardBody className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="input-wrapper">
+                <label className="input-label">Company Name</label>
+                <div className="relative">
+                  <HiOutlineOfficeBuilding className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} placeholder="e.g., ABC Corporation" className="input pl-10" />
+                </div>
+              </div>
+
               <div className="input-wrapper">
                 <label className="input-label">Industry</label>
                 <select name="industry" value={formData.industry} onChange={handleChange} className="input">
@@ -147,25 +242,11 @@ export default function CreateClientPage() {
                   <option value="Retail">Retail</option>
                   <option value="Manufacturing">Manufacturing</option>
                   <option value="Consulting">Consulting</option>
+                  <option value="Education">Education</option>
+                  <option value="Real Estate">Real Estate</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
-              <div className="input-wrapper">
-                <label className="input-label">Company Size</label>
-                <select name="company_size" value={formData.company_size} onChange={handleChange} className="input">
-                  <option value="">Select size</option>
-                  <option value="1-10">1-10 Employees</option>
-                  <option value="11-50">11-50 Employees</option>
-                  <option value="51-200">51-200 Employees</option>
-                  <option value="201-500">201-500 Employees</option>
-                  <option value="500+">500+ Employees</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Annual Revenue" type="number" name="annual_revenue" value={formData.annual_revenue} onChange={handleChange} placeholder="e.g. 1000000" />
-              <Input label="Tax ID / VAT" name="tax_id" value={formData.tax_id} onChange={handleChange} placeholder="Tax Identification Number" />
             </div>
 
             <div className="input-wrapper">
@@ -175,29 +256,9 @@ export default function CreateClientPage() {
           </CardBody>
         </Card>
 
-        <Card className="mb-6">
-          <CardHeader title="Primary Contact" />
-          <CardBody className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="input-wrapper">
-                <label className="input-label">Contact Name</label>
-                <div className="relative">
-                  <HiOutlineUser className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input type="text" name="contact_name" value={formData.contact_name} onChange={handleChange} placeholder="John Smith" className="input pl-10" />
-                </div>
-              </div>
-              <Input label="Designation" name="contact_designation" value={formData.contact_designation} onChange={handleChange} placeholder="e.g., CEO, Project Manager" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Email" type="email" name="contact_email" value={formData.contact_email} onChange={handleChange} placeholder="john@company.com" />
-              <Input label="Phone" name="contact_phone" value={formData.contact_phone} onChange={handleChange} placeholder="+1 234 567 8901" />
-            </div>
-          </CardBody>
-        </Card>
-
         <div className="flex gap-3">
           <Button type="button" variant="secondary" onClick={() => router.back()} className="flex-1">Cancel</Button>
-          <Button type="submit" variant="primary" loading={loading} className="flex-1">
+          <Button type="submit" variant="primary" loading={loading} className="flex-1 shadow-lg shadow-primary/20">
             <HiOutlineCheck className="w-4 h-4" /> Create Client
           </Button>
         </div>

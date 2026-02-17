@@ -1,88 +1,69 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardBody, StatCard, StatusBadge, Avatar, PageHeader } from '@/components/ui';
 import Button from '@/components/ui/Button';
 import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal';
 import api from '@/lib/api';
+import { useAPI, useList } from '@/hooks/useAPI';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import {
   HiOutlineSearch, HiOutlinePlus, HiOutlineUsers, HiOutlineBriefcase,
   HiOutlineOfficeBuilding, HiOutlineUserAdd, HiOutlineEye, HiOutlinePencil,
   HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineDownload,
-  HiOutlineMail, HiOutlinePhone, HiOutlineDotsVertical, HiOutlineCheck
+  HiOutlineCheck, HiOutlineRefresh
 } from 'react-icons/hi';
 
 export default function EmployeesPage() {
   const { user } = useAuth();
   const toast = useToast();
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ open: false, employee: null });
   const [deleting, setDeleting] = useState(false);
-
-  const [stats, setStats] = useState({ total: 0, new: 0, departments: 0, designations: 0 });
-  const [departments, setDepartments] = useState([]);
   const [selectedDept, setSelectedDept] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  useEffect(() => {
-    fetchStats();
+  // Debounce search
+  const searchTimeout = useCallback((value) => {
+    setSearch(value);
+    clearTimeout(window._empSearchTimer);
+    window._empSearchTimer = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(1);
+    }, 400);
   }, []);
 
-  useEffect(() => {
-    fetchEmployees();
-  }, [page, search, selectedDept, selectedStatus]);
+  // SWR — Employees list (cached, instant back-nav)
+  const { data: employeesData, isLoading: loading, mutate: refreshEmployees } = useList('/employees', {
+    page,
+    page_size: 12,
+    search: debouncedSearch || undefined,
+    department_id: selectedDept || undefined,
+    status: selectedStatus || undefined,
+  });
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const [deptRes, desigRes, overviewRes] = await Promise.all([
-        api.get('/organizations/departments').catch(() => ({ items: [] })),
-        api.get('/organizations/designations').catch(() => ({ items: [] })),
-        api.get('/dashboard/attendance-overview').catch(() => ({ total_employees: 0 })),
-      ]);
+  const employees = useMemo(() => employeesData?.items || employeesData?.data || [], [employeesData]);
+  const totalPages = employeesData?.total_pages || 1;
 
-      setDepartments(deptRes.items || deptRes || []);
+  // SWR — Departments (cached, shared across pages)
+  const { data: deptData } = useAPI('/organizations/departments');
+  const departments = useMemo(() => deptData?.items || deptData || [], [deptData]);
 
-      setStats({
-        total: overviewRes.total_employees || 0,
-        new: 0,
-        departments: (deptRes.items || deptRes || []).length,
-        designations: (desigRes.items || desigRes || []).length
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  }, []);
+  // SWR — Stats (from attendance overview + organizations)
+  const { data: overviewData } = useAPI('/dashboard/attendance-overview');
+  const { data: desigData } = useAPI('/organizations/designations');
 
-  const fetchEmployees = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        page: page.toString(),
-        page_size: '12', // Reduced for card grid
-      });
-      if (search) params.append('search', search);
-      if (selectedDept) params.append('department_id', selectedDept);
-      if (selectedStatus) params.append('status', selectedStatus);
-
-      const response = await api.get(`/employees?${params}`);
-      setEmployees(response.items || response.data || []);
-      setTotalPages(response.total_pages || 1);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      setEmployees([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, selectedDept, selectedStatus]);
+  const stats = useMemo(() => ({
+    total: overviewData?.total_employees || 0,
+    departments: departments.length,
+    designations: (desigData?.items || desigData || []).length,
+  }), [overviewData, departments, desigData]);
 
   const handleDelete = useCallback((employee) => {
     setDeleteModal({ open: true, employee });
@@ -90,20 +71,18 @@ export default function EmployeesPage() {
 
   const confirmDelete = useCallback(async () => {
     if (!deleteModal.employee) return;
-
     setDeleting(true);
     try {
       await api.delete(`/employees/${deleteModal.employee.id}`);
       toast.success('Employee deleted successfully');
       setDeleteModal({ open: false, employee: null });
-      fetchEmployees();
+      refreshEmployees();
     } catch (error) {
-      console.error('Error deleting employee:', error);
       toast.error(error.message || 'Failed to delete employee');
     } finally {
       setDeleting(false);
     }
-  }, [deleteModal.employee, toast, fetchEmployees]);
+  }, [deleteModal.employee, toast, refreshEmployees]);
 
   // Bulk operations
   const handleSelectAll = useCallback(() => {
@@ -128,13 +107,13 @@ export default function EmployeesPage() {
       await api.post('/employees/bulk-delete', selectedEmployees);
       toast.success(`${selectedEmployees.length} employees deleted`);
       setSelectedEmployees([]);
-      fetchEmployees();
+      refreshEmployees();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to delete employees');
     } finally {
       setBulkLoading(false);
     }
-  }, [selectedEmployees, toast, fetchEmployees]);
+  }, [selectedEmployees, toast, refreshEmployees]);
 
   const handleExportCSV = useCallback(async () => {
     try {
@@ -202,11 +181,11 @@ export default function EmployeesPage() {
             <div
               onClick={handleSelectAll}
               className={`
-                        flex items-center justify-center w-10 h-10 rounded-lg cursor-pointer border transition-all
-                        ${selectedEmployees.length > 0 && selectedEmployees.length === employees.length
+                flex items-center justify-center w-10 h-10 rounded-lg cursor-pointer border transition-all
+                ${selectedEmployees.length > 0 && selectedEmployees.length === employees.length
                   ? 'bg-primary border-primary text-primary-foreground'
                   : 'bg-background border-border text-muted-foreground hover:bg-muted'}
-                    `}
+              `}
               title="Select All"
             >
               <HiOutlineCheck className={`w-5 h-5 ${selectedEmployees.length === employees.length && employees.length > 0 ? 'opacity-100' : 'opacity-0'}`} />
@@ -218,7 +197,7 @@ export default function EmployeesPage() {
                 type="text"
                 placeholder="Search employees..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => searchTimeout(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
               />
             </div>
@@ -226,7 +205,7 @@ export default function EmployeesPage() {
             <select
               className="px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-[140px]"
               value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
+              onChange={(e) => { setSelectedDept(e.target.value); setPage(1); }}
             >
               <option value="">All Departments</option>
               {departments.map(dept => (
@@ -237,13 +216,22 @@ export default function EmployeesPage() {
             <select
               className="px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-[120px]"
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => { setSelectedStatus(e.target.value); setPage(1); }}
             >
               <option value="">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="terminated">Terminated</option>
             </select>
+
+            {/* Refresh Button */}
+            <button
+              onClick={() => refreshEmployees()}
+              className="p-2 rounded-lg border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+              title="Refresh"
+            >
+              <HiOutlineRefresh className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Bulk Actions */}
@@ -266,11 +254,32 @@ export default function EmployeesPage() {
         </div>
       </div>
 
+      {/* Result count */}
+      {!loading && employees.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          Showing {employees.length} employee{employees.length !== 1 ? 's' : ''}
+          {debouncedSearch && ` matching "${debouncedSearch}"`}
+        </p>
+      )}
+
       {/* Employees Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-64 rounded-xl bg-muted/20 animate-pulse" />
+            <div key={i} className="rounded-2xl bg-card border border-border/50 overflow-hidden">
+              <div className="p-5 flex flex-col items-center pt-8">
+                <div className="w-16 h-16 rounded-full bg-muted/30 animate-pulse mb-4" />
+                <div className="h-5 w-32 bg-muted/30 animate-pulse rounded mb-2" />
+                <div className="h-4 w-24 bg-muted/30 animate-pulse rounded mb-1" />
+                <div className="h-3 w-40 bg-muted/30 animate-pulse rounded mb-4" />
+                <div className="w-full border-t border-border/40 my-4" />
+                <div className="w-full h-16 bg-muted/20 animate-pulse rounded-lg mb-4" />
+                <div className="flex gap-2 w-full">
+                  <div className="flex-1 h-9 bg-muted/20 animate-pulse rounded-lg" />
+                  <div className="flex-1 h-9 bg-muted/20 animate-pulse rounded-lg" />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       ) : employees.length === 0 ? (
@@ -279,8 +288,12 @@ export default function EmployeesPage() {
             <HiOutlineUsers className="w-10 h-10 text-muted-foreground/40" />
           </div>
           <h3 className="text-xl font-bold text-foreground mb-2">No employees found</h3>
-          <p className="text-muted-foreground mb-8">Try adjusting your filters or add your first employee.</p>
-          {user?.role?.code?.toLowerCase() !== 'employee' && (
+          <p className="text-muted-foreground mb-8">
+            {debouncedSearch || selectedDept || selectedStatus
+              ? 'Try adjusting your filters.'
+              : 'Add your first employee to get started.'}
+          </p>
+          {user?.role?.code?.toLowerCase() !== 'employee' && !debouncedSearch && (
             <Link href="/employees/new">
               <Button variant="primary" className="shadow-lg shadow-primary/20">
                 <HiOutlinePlus className="w-5 h-5 mr-2" /> Add Employee
@@ -294,9 +307,9 @@ export default function EmployeesPage() {
             <div
               key={emp.id}
               className={`
-                        group relative bg-card hover:bg-muted/5 rounded-2xl border transition-all duration-300 overflow-hidden
-                        ${selectedEmployees.includes(emp.id) ? 'border-primary ring-1 ring-primary shadow-md' : 'border-border/50 hover:border-primary/30 hover:shadow-lg'}
-                    `}
+                group relative bg-card hover:bg-muted/5 rounded-2xl border transition-all duration-300 overflow-hidden
+                ${selectedEmployees.includes(emp.id) ? 'border-primary ring-1 ring-primary shadow-md' : 'border-border/50 hover:border-primary/30 hover:shadow-lg'}
+              `}
             >
               {/* Selection Checkbox (Overlay) */}
               <div
@@ -305,9 +318,9 @@ export default function EmployeesPage() {
                   handleSelectEmployee(emp.id);
                 }}
                 className={`
-                            absolute top-3 left-3 z-10 w-6 h-6 rounded-md border cursor-pointer flex items-center justify-center transition-all bg-card
-                            ${selectedEmployees.includes(emp.id) ? 'border-primary bg-primary text-primary-foreground' : 'border-border/80 text-transparent hover:border-primary/60'}
-                        `}
+                  absolute top-3 left-3 z-10 w-6 h-6 rounded-md border cursor-pointer flex items-center justify-center transition-all bg-card
+                  ${selectedEmployees.includes(emp.id) ? 'border-primary bg-primary text-primary-foreground' : 'border-border/80 text-transparent hover:border-primary/60'}
+                `}
               >
                 <HiOutlineCheck className="w-4 h-4" />
               </div>

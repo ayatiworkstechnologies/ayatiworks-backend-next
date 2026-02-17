@@ -5,6 +5,7 @@ import { PermissionProvider } from '@/context/PermissionContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import SWRProvider from '@/components/SWRProvider';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -75,15 +76,17 @@ export default function RootLayout({ children }) {
     <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
       <body className={inter.className}>
         <ErrorBoundary>
-          <AuthProvider>
-            <PermissionProvider>
-              <ThemeProvider>
-                <ToastProvider>
-                  {children}
-                </ToastProvider>
-              </ThemeProvider>
-            </PermissionProvider>
-          </AuthProvider>
+          <SWRProvider>
+            <AuthProvider>
+              <PermissionProvider>
+                <ThemeProvider>
+                  <ToastProvider>
+                    {children}
+                  </ToastProvider>
+                </ThemeProvider>
+              </PermissionProvider>
+            </AuthProvider>
+          </SWRProvider>
         </ErrorBoundary>
       </body>
     </html>

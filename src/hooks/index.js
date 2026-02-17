@@ -10,9 +10,10 @@
 export { useDebounce } from './useDebounce';
 export { useClickOutside } from './useClickOutside';
 export { usePermission } from './usePermission';
-export { useDashboardStats, useRecentActivity, useQuickActions } from './useDashboardData';
+// API & data fetching hooks
+export { useAPI, useList, useItem, useTodayAttendance, useAttendanceOverview, useProjectOverview } from './useAPI';
+export { useDashboardStats, useRecentActivity, useQuickActions, useDashboardCharts } from './useDashboardData';
 export { useCrudOperations } from './useCrudOperations';
-export { useAPI, useFetch } from './useAPI';
 
 // New utility hooks
 export { useLocalStorage } from './useLocalStorage';

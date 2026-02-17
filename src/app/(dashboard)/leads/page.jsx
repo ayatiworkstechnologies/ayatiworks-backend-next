@@ -93,8 +93,8 @@ export default function LeadsPage() {
     <div className="space-y-8 animate-fade-in-up">
       {/* Page Header */}
       <PageHeader
-        title="Leads Pipeline"
-        description="Track and manage your sales leads"
+        title="Internal Leads"
+        description="Track and manage company sales leads"
       >
         <Button variant="primary" onClick={() => setShowNewLead(true)} className="shadow-lg shadow-primary/20">
           <HiOutlinePlus className="w-5 h-5" /> Add Lead

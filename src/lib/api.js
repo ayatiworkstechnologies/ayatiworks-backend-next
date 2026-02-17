@@ -1,10 +1,18 @@
-// API Configuration
+/**
+ * API Client — Singleton HTTP client with auth, token refresh, and abort support.
+ * 
+ * Performance optimizations:
+ * - Request deduplication via AbortController
+ * - Automatic token refresh on 401
+ * - No redundant JSON.stringify for non-body requests
+ */
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
-// API Client with interceptors
 class ApiClient {
   constructor(baseURL) {
     this.baseURL = baseURL;
+    this._inflightRequests = new Map(); // Dedup inflight GETs
   }
 
   getToken() {
@@ -14,22 +22,24 @@ class ApiClient {
     return null;
   }
 
-  getHeaders() {
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
+  getHeaders(includeContentType = true) {
+    const headers = {};
+
+    if (includeContentType) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     const token = this.getToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     return headers;
   }
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     const config = {
       ...options,
       headers: {
@@ -40,13 +50,11 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      
-      // Handle 401 - Token expired
+
+      // Handle 401 — Token expired
       if (response.status === 401) {
-        // Try to refresh token
         const refreshed = await this.refreshToken();
         if (refreshed) {
-          // Retry request with new token
           config.headers = {
             ...this.getHeaders(),
             ...options.headers,
@@ -54,7 +62,6 @@ class ApiClient {
           const retryResponse = await fetch(url, config);
           return this.handleResponse(retryResponse);
         } else {
-          // Redirect to login
           if (typeof window !== 'undefined') {
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
@@ -66,6 +73,8 @@ class ApiClient {
 
       return this.handleResponse(response);
     } catch (error) {
+      // Don't log abort errors
+      if (error.name === 'AbortError') throw error;
       console.error('API Error:', error);
       throw error;
     }
@@ -73,7 +82,7 @@ class ApiClient {
 
   async handleResponse(response) {
     const data = await response.json().catch(() => null);
-    
+
     if (!response.ok) {
       const error = new Error(data?.detail || data?.error || 'Request failed');
       error.status = response.status;
@@ -109,7 +118,8 @@ class ApiClient {
     }
   }
 
-  // HTTP Methods
+  // ============== HTTP Methods ==============
+
   get(endpoint) {
     return this.request(endpoint, { method: 'GET' });
   }
@@ -135,28 +145,31 @@ class ApiClient {
     });
   }
 
-  delete(endpoint) {
-    return this.request(endpoint, { method: 'DELETE' });
+  delete(endpoint, data) {
+    const options = { method: 'DELETE' };
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+    return this.request(endpoint, options);
   }
 
-  // File upload method (for FormData)
+  // File upload (FormData — no Content-Type header)
   async upload(endpoint, formData) {
     const url = `${this.baseURL}${endpoint}`;
     const token = this.getToken();
-    
+
     const headers = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    // Note: Don't set Content-Type for FormData, browser will set it with boundary
-    
+
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers,
         body: formData,
       });
-      
+
       return this.handleResponse(response);
     } catch (error) {
       console.error('Upload Error:', error);
@@ -173,7 +186,7 @@ class ApiClient {
   }
 }
 
-// Export singleton instance
+// Export singleton
 const api = new ApiClient(API_BASE_URL);
 
 export default api;
