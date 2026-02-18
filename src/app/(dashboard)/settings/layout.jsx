@@ -1,15 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Card, CardHeader, CardBody } from '@/components/ui';
+import { Card } from '@/components/ui';
 import PageHeader from '@/components/ui/PageHeader';
 import { useAuth } from '@/context/AuthContext';
 import {
     HiOutlineUser, HiOutlineShieldCheck, HiOutlineBell, HiOutlineMoon,
     HiOutlineOfficeBuilding, HiOutlineLocationMarker, HiOutlineCollection, HiOutlineIdentification,
-    HiOutlineBadgeCheck, HiOutlineClock
+    HiOutlineBadgeCheck, HiOutlineClock, HiOutlineCog, HiOutlineChevronDown
 } from 'react-icons/hi';
 
 // Role group constants
@@ -20,6 +20,8 @@ const HR_ROLES = ['HR Manager', 'HR', 'HR_MANAGER'];
 export default function SettingsLayout({ children }) {
     const { user } = useAuth();
     const pathname = usePathname();
+    const [orgExpanded, setOrgExpanded] = useState(true);
+    const [prefExpanded, setPrefExpanded] = useState(true);
 
     // Get user role info
     const userRole = useMemo(() => {
@@ -52,17 +54,17 @@ export default function SettingsLayout({ children }) {
         const links = [];
 
         if (isAdmin || isSuperAdmin) {
-            links.push({ href: '/settings/companies', label: 'Companies', icon: HiOutlineOfficeBuilding });
-            links.push({ href: '/settings/branches', label: 'Branches', icon: HiOutlineLocationMarker });
+            links.push({ href: '/settings/companies', label: 'Companies', icon: HiOutlineOfficeBuilding, desc: 'Manage companies' });
+            links.push({ href: '/settings/branches', label: 'Branches', icon: HiOutlineLocationMarker, desc: 'Office locations' });
         }
 
         if (isHR || isAdmin || isManagement) {
-            links.push({ href: '/settings/departments', label: 'Departments', icon: HiOutlineCollection });
-            links.push({ href: '/settings/designations', label: 'Designations', icon: HiOutlineIdentification });
+            links.push({ href: '/settings/departments', label: 'Departments', icon: HiOutlineCollection, desc: 'Team structure' });
+            links.push({ href: '/settings/designations', label: 'Designations', icon: HiOutlineIdentification, desc: 'Job titles' });
         }
 
         if (isHR || isAdmin || isManagement) {
-            links.push({ href: '/settings/shifts', label: 'Shifts', icon: HiOutlineClock });
+            links.push({ href: '/settings/shifts', label: 'Shifts', icon: HiOutlineClock, desc: 'Work schedules' });
         }
 
         return links;
@@ -70,108 +72,134 @@ export default function SettingsLayout({ children }) {
 
     // Preference links
     const preferenceLinks = [
-        { href: '/settings/security', label: 'Security', icon: HiOutlineShieldCheck },
-        { href: '/settings/notifications', label: 'Notifications', icon: HiOutlineBell },
-        { href: '/settings/appearance', label: 'Appearance', icon: HiOutlineMoon },
+        { href: '/settings/profile', label: 'Profile', icon: HiOutlineUser, desc: 'Your information' },
+        { href: '/settings/security', label: 'Security', icon: HiOutlineShieldCheck, desc: 'Password & 2FA' },
+        { href: '/settings/notifications', label: 'Notifications', icon: HiOutlineBell, desc: 'Alert preferences' },
+        { href: '/settings/appearance', label: 'Appearance', icon: HiOutlineMoon, desc: 'Theme & display' },
     ];
 
-    // Role badge color
-    const getRoleBadgeColor = (roleName) => {
+    // Role badge styles
+    const getRoleBadgeStyle = (roleName) => {
         const name = roleName?.toLowerCase() || '';
-        if (name.includes('super')) return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white';
-        if (name.includes('admin')) return 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white';
-        if (name.includes('manager')) return 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white';
-        if (name.includes('hr')) return 'bg-gradient-to-r from-orange-500 to-amber-500 text-white';
-        if (name.includes('employee')) return 'bg-gradient-to-r from-emerald-500 to-green-500 text-white';
-        if (name.includes('client')) return 'bg-gradient-to-r from-slate-500 to-gray-500 text-white';
-        return 'bg-primary/10 text-primary';
+        if (name.includes('super')) return 'from-violet-500 to-fuchsia-500';
+        if (name.includes('admin')) return 'from-blue-500 to-indigo-500';
+        if (name.includes('manager')) return 'from-cyan-500 to-teal-500';
+        if (name.includes('hr')) return 'from-orange-500 to-amber-500';
+        if (name.includes('employee')) return 'from-emerald-500 to-green-500';
+        if (name.includes('client')) return 'from-slate-500 to-gray-500';
+        return 'from-primary to-primary/70';
     };
+
+    // User initials
+    const initials = useMemo(() => {
+        const name = user?.full_name || user?.name || user?.email || 'U';
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }, [user]);
+
+    const NavLink = ({ link }) => {
+        const Icon = link.icon;
+        const isActive = pathname === link.href || (link.href !== '/settings' && pathname.startsWith(link.href));
+        return (
+            <Link
+                href={link.href}
+                className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    }`}
+            >
+                {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary rounded-r-full" />
+                )}
+                <div className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 ${isActive
+                    ? 'bg-primary/15 text-primary'
+                    : 'bg-muted/40 text-muted-foreground group-hover:bg-muted/70 group-hover:text-foreground'
+                    }`}>
+                    <Icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="truncate">{link.label}</div>
+                    <div className={`text-[10px] truncate transition-colors ${isActive ? 'text-primary/60' : 'text-muted-foreground/60'}`}>{link.desc}</div>
+                </div>
+                {isActive && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                )}
+            </Link>
+        );
+    };
+
+    const SectionHeader = ({ title, expanded, onToggle }) => (
+        <button
+            onClick={onToggle}
+            className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-widest hover:text-muted-foreground transition-colors"
+        >
+            <span>{title}</span>
+            <HiOutlineChevronDown className={`w-3 h-3 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
+        </button>
+    );
 
     return (
         <div className="space-y-6 animate-fade-in-up">
-
+            {/* Page Header */}
+            <PageHeader
+                title="Settings"
+                description="Manage your account and organization preferences"
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Sidebar */}
-                <div className="lg:col-span-3 space-y-6 lg:sticky lg:top-6 self-start h-fit">
-                    {/* Menu Section */}
-                    <Card className="overflow-hidden border-0 shadow-lg bg-card/50 backdrop-blur-sm">
+                <div className="lg:col-span-3 space-y-4 lg:sticky lg:top-6 self-start h-fit">
 
-                        {/* Organization Group */}
-                        {organizationLinks.length > 0 && (
-                            <>
-                                <div className="p-3 bg-muted/30 border-b border-border/50">
-                                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">Organization</h3>
+                    {/* User Profile Card */}
+                    <Card className="overflow-hidden border-0 shadow-lg">
+                        <div className={`h-16 bg-gradient-to-r ${getRoleBadgeStyle(userRole.name)} opacity-80`} />
+                        <div className="px-4 pb-4 -mt-8">
+                            <div className="flex items-end gap-3 mb-3">
+                                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getRoleBadgeStyle(userRole.name)} flex items-center justify-center text-white font-bold text-lg shadow-lg ring-4 ring-card`}>
+                                    {initials}
                                 </div>
-                                <div className="p-2 space-y-1">
-                                    {organizationLinks.map((link) => {
-                                        const Icon = link.icon;
-                                        const isActive = pathname.startsWith(link.href);
-                                        return (
-                                            <Link
-                                                key={link.href}
-                                                href={link.href}
-                                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 group ${isActive
-                                                    ? 'bg-primary/10 text-primary shadow-sm border border-primary/10 relative overflow-hidden'
-                                                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:translate-x-1'
-                                                    }`}
-                                            >
-                                                {isActive && (
-                                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
-                                                )}
-                                                <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'text-primary scale-110' : 'text-muted-foreground group-hover:scale-110'}`} />
-                                                <span>{link.label}</span>
-                                            </Link>
-                                        );
-                                    })}
+                                <div className="flex-1 min-w-0 pb-0.5">
+                                    <h3 className="font-bold text-foreground text-sm truncate">{user?.full_name || user?.name || 'User'}</h3>
+                                    <p className="text-[11px] text-muted-foreground truncate">{user?.email}</p>
                                 </div>
-                            </>
-                        )}
-
-                        {/* Preferences Group */}
-                        <div className="p-3 bg-muted/30 border-b border-border/50 border-t mt-2">
-                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">Preferences</h3>
-                        </div>
-                        <div className="p-2 space-y-1">
-                            {preferenceLinks.map((link) => {
-                                const Icon = link.icon;
-                                const isActive = pathname.startsWith(link.href);
-                                return (
-                                    <Link
-                                        key={link.href}
-                                        href={link.href}
-                                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 group ${isActive
-                                            ? 'bg-primary/10 text-primary shadow-sm border border-primary/10 relative overflow-hidden'
-                                            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:translate-x-1'
-                                            }`}
-                                    >
-                                        {isActive && (
-                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
-                                        )}
-                                        <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'text-primary scale-110' : 'text-muted-foreground group-hover:scale-110'}`} />
-                                        <span>{link.label}</span>
-                                    </Link>
-                                );
-                            })}
+                            </div>
+                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r ${getRoleBadgeStyle(userRole.name)} text-white shadow-sm`}>
+                                <HiOutlineBadgeCheck className="w-3 h-3" />
+                                {userRole.name || 'User'}
+                            </div>
                         </div>
                     </Card>
 
-                    {/* Role Info Card */}
-                    <Card className="overflow-hidden border-0 shadow-lg">
-                        <div className="p-3 bg-muted/30 border-b border-border/50">
-                            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">Your Role</h3>
-                        </div>
-                        <div className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <HiOutlineBadgeCheck className="w-5 h-5 text-primary" />
-                                </div>
-                                <div className="flex-1">
-                                    <div className={`text-sm font-bold px-3 py-1 rounded-full inline-block ${getRoleBadgeColor(userRole.name)}`}>
-                                        {userRole.name || 'User'}
+                    {/* Navigation Card */}
+                    <Card className="overflow-hidden border-0 shadow-lg p-2">
+                        {/* Organization Group */}
+                        {organizationLinks.length > 0 && (
+                            <div className="mb-1">
+                                <SectionHeader title="Organization" expanded={orgExpanded} onToggle={() => setOrgExpanded(!orgExpanded)} />
+                                {orgExpanded && (
+                                    <div className="space-y-0.5">
+                                        {organizationLinks.map((link) => (
+                                            <NavLink key={link.href} link={link} />
+                                        ))}
                                     </div>
-                                </div>
+                                )}
                             </div>
+                        )}
+
+                        {/* Divider */}
+                        {organizationLinks.length > 0 && (
+                            <div className="mx-3 my-2 border-t border-border/40" />
+                        )}
+
+                        {/* Preferences Group */}
+                        <div>
+                            <SectionHeader title="Preferences" expanded={prefExpanded} onToggle={() => setPrefExpanded(!prefExpanded)} />
+                            {prefExpanded && (
+                                <div className="space-y-0.5">
+                                    {preferenceLinks.map((link) => (
+                                        <NavLink key={link.href} link={link} />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </Card>
                 </div>
