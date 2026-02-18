@@ -34,7 +34,7 @@ export default function ClientMailTab({ clientId }) {
 
     // Compose form
     const [composeForm, setComposeForm] = useState({
-        template_id: '', to_email: '', subject: '', html_body: '', variables: {}
+        template_id: '', to_email: '', cc: '', bcc: '', subject: '', html_body: '', variables: {}
     });
     const [sending, setSending] = useState(false);
 
@@ -194,6 +194,8 @@ export default function ClientMailTab({ clientId }) {
                 template_id: templateId,
                 subject: tmpl.subject,
                 html_body: tmpl.html_body,
+                cc: (tmpl.cc_email || []).join(', '),
+                bcc: (tmpl.bcc_email || []).join(', '),
                 variables: vars,
             }));
         } catch (e) { console.error(e); }
@@ -207,6 +209,8 @@ export default function ClientMailTab({ clientId }) {
         try {
             const payload = {
                 to_email: composeForm.to_email,
+                cc: composeForm.cc ? composeForm.cc.split(',').map(e => e.trim()).filter(Boolean) : undefined,
+                bcc: composeForm.bcc ? composeForm.bcc.split(',').map(e => e.trim()).filter(Boolean) : undefined,
                 subject: composeForm.subject || undefined,
                 html_body: composeForm.html_body || undefined,
                 template_id: composeForm.template_id ? parseInt(composeForm.template_id) : undefined,
@@ -214,7 +218,7 @@ export default function ClientMailTab({ clientId }) {
             };
             await api.post(`/clients/${clientId}/send-email`, payload);
             toast.success('Email sent successfully!');
-            setComposeForm({ template_id: '', to_email: '', subject: '', html_body: '', variables: {} });
+            setComposeForm({ template_id: '', to_email: '', cc: '', bcc: '', subject: '', html_body: '', variables: {} });
         } catch (e) {
             toast.error(e.message || e.detail || 'Failed to send email');
         } finally { setSending(false); }
@@ -407,6 +411,11 @@ export default function ClientMailTab({ clientId }) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <Input label="To Email" type="email" value={composeForm.to_email} onChange={e => setComposeForm(p => ({ ...p, to_email: e.target.value }))} placeholder="recipient@example.com" required />
                                 <Input label="Subject" value={composeForm.subject} onChange={e => setComposeForm(p => ({ ...p, subject: e.target.value }))} placeholder="Email subject..." required />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <Input label="CC (Optional)" value={composeForm.cc} onChange={e => setComposeForm(p => ({ ...p, cc: e.target.value }))} placeholder="Comma-separated emails" />
+                                <Input label="BCC (Optional)" value={composeForm.bcc} onChange={e => setComposeForm(p => ({ ...p, bcc: e.target.value }))} placeholder="Comma-separated emails" />
                             </div>
 
                             <div className="input-wrapper">
