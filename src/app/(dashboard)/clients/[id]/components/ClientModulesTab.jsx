@@ -56,7 +56,7 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
     useEffect(() => {
         fetchModules();
         fetchApiKeyStatus();
-        if (!isClientView) fetchTemplates();
+        fetchTemplates();
     }, [clientId]);
 
     const fetchTemplates = async () => {
@@ -88,7 +88,8 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
     // ===== Templates (Preview & Edit) =====
     const [previewTemplate, setPreviewTemplate] = useState(null);
     const [editingTemplate, setEditingTemplate] = useState(null);
-    const [templateForm, setTemplateForm] = useState({ name: '', subject: '', html_body: '', from_email: '', cc_email: '', bcc_email: '' });
+    const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
+    const [templateForm, setTemplateForm] = useState({ name: '', subject: '', html_body: '', from_email: '', cc_email: '', bcc_email: '', variables: '' });
     const [templateSaving, setTemplateSaving] = useState(false);
 
     const handlePreviewTemplate = async (templateId) => {
@@ -108,7 +109,8 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
                 html_body: template.html_body || '',
                 from_email: template.from_email || '',
                 cc_email: (template.cc_email || []).join(', '),
-                bcc_email: (template.bcc_email || []).join(', ')
+                bcc_email: (template.bcc_email || []).join(', '),
+                variables: (template.variables || []).join(', ')
             });
         } catch (e) { toast.error('Failed to load template for editing'); }
     };
@@ -124,7 +126,7 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
                 ...templateForm,
                 cc_email: templateForm.cc_email.split(',').map(e => e.trim()).filter(Boolean),
                 bcc_email: templateForm.bcc_email.split(',').map(e => e.trim()).filter(Boolean),
-                variables: editingTemplate.variables // Maintain existing variables for now
+                variables: templateForm.variables ? templateForm.variables.split(',').map(s => s.trim()).filter(Boolean) : []
             };
             await api.put(`/clients/${clientId}/mail-templates/${editingTemplate.id}`, payload);
             toast.success('Template updated!');
@@ -134,6 +136,32 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
             toast.error(e.message || 'Failed to update template');
         } finally { setTemplateSaving(false); }
     };
+
+    const handleSaveNewTemplate = async () => {
+        if (!templateForm.name || !templateForm.subject || !templateForm.html_body) {
+            toast.error('Name, Subject, and Body are required');
+            return;
+        }
+        setTemplateSaving(true);
+        try {
+            const payload = {
+                ...templateForm,
+                cc_email: templateForm.cc_email.split(',').map(e => e.trim()).filter(Boolean),
+                bcc_email: templateForm.bcc_email.split(',').map(e => e.trim()).filter(Boolean),
+                variables: templateForm.variables ? templateForm.variables.split(',').map(s => s.trim()).filter(Boolean) : []
+            };
+            const res = await api.post(`/clients/${clientId}/mail-templates`, payload);
+            toast.success('Template created!');
+            setIsCreatingTemplate(false);
+            setTemplateForm({ name: '', subject: '', html_body: '', from_email: '', cc_email: '', bcc_email: '', variables: '' });
+            await fetchTemplates(); // Refresh list
+            // Auto-select the new template
+            setModuleForm(p => ({ ...p, mail_template_id: res.id }));
+        } catch (e) {
+            toast.error(e.message || 'Failed to create template');
+        } finally { setTemplateSaving(false); }
+    };
+
     const fetchApiKeyStatus = async () => {
         try {
             const res = await api.get(`/clients/${clientId}/api-key`);
@@ -229,6 +257,20 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
         if (moduleForm.fields.length === 0) { toast.error('At least one field is required'); return; }
         for (const f of moduleForm.fields) {
             if (!f.label.trim()) { toast.error('All fields must have a label'); return; }
+        }
+
+        // Validate Automation Requirements
+        if (moduleForm.mail_template_id) {
+            // Check for valid email field (either named exactly 'email' or containing 'email' in the name)
+            const emailField = moduleForm.fields.find(f =>
+                ['email', 'to_email', 'contact_email', 'recipient_email'].includes(f.name) ||
+                (f.type === 'email') // Or simply any field of type 'email'
+            );
+
+            if (!emailField) {
+                toast.error("Modules with Auto-Email must have an 'email' field (or similar, e.g., 'To Email').");
+                return;
+            }
         }
 
         setSaving(true);
@@ -536,7 +578,7 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
                                             <Button variant="ghost" size="sm" onClick={() => fetchTemplates()} className="h-6 text-xs px-2 hover:bg-primary/10 hover:text-primary" title="Refresh list">
                                                 <HiOutlineRefresh className="w-3 h-3 mr-1" /> Refresh
                                             </Button>
-                                            <Button variant="ghost" size="sm" onClick={() => toast.info("Please switch to the 'Mail' tab to create new templates.")} className="h-6 text-xs px-2 hover:bg-primary/10 hover:text-primary">
+                                            <Button variant="ghost" size="sm" onClick={() => { setIsCreatingTemplate(true); setTemplateForm({ name: '', subject: '', html_body: '', from_email: '', cc_email: '', bcc_email: '', variables: '' }); }} className="h-6 text-xs px-2 hover:bg-primary/10 hover:text-primary">
                                                 <HiOutlinePlus className="w-3 h-3 mr-1" /> Create Template
                                             </Button>
                                         </div>
@@ -690,13 +732,13 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
                     </div>
                 )}
 
-                {/* Edit Template Modal */}
-                {editingTemplate && (
+                {/* Edit/Create Template Modal */}
+                {(editingTemplate || isCreatingTemplate) && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
                         <div className="bg-background rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden border border-border/60">
                             <div className="p-4 border-b border-border/40 flex justify-between items-center bg-muted/5">
-                                <h3 className="font-bold text-lg">Quick Edit Template</h3>
-                                <button onClick={() => setEditingTemplate(null)} className="p-2 hover:bg-muted/20 rounded-lg transition-colors"><HiOutlineX className="w-5 h-5 text-muted-foreground" /></button>
+                                <h3 className="font-bold text-lg">{isCreatingTemplate ? 'Create New Template' : 'Quick Edit Template'}</h3>
+                                <button onClick={() => { setEditingTemplate(null); setIsCreatingTemplate(false); }} className="p-2 hover:bg-muted/20 rounded-lg transition-colors"><HiOutlineX className="w-5 h-5 text-muted-foreground" /></button>
                             </div>
                             <div className="p-6 space-y-4">
                                 <Input label="Template Name" value={templateForm.name} onChange={e => setTemplateForm(p => ({ ...p, name: e.target.value }))} />
@@ -715,10 +757,18 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
                                         placeholder="<html>..."
                                     />
                                 </div>
+                                <Input
+                                    label="Variables"
+                                    value={templateForm.variables}
+                                    onChange={e => setTemplateForm(p => ({ ...p, variables: e.target.value }))}
+                                    placeholder="name, email, company, date"
+                                    description="Comma separated list of variables"
+                                    className="bg-muted/10 border-border/60"
+                                />
                             </div>
                             <div className="p-4 border-t border-border/40 flex justify-end gap-3 bg-muted/5">
-                                <Button variant="secondary" onClick={() => setEditingTemplate(null)}>Cancel</Button>
-                                <Button variant="primary" onClick={handleUpdateTemplate} loading={templateSaving}>Update Template</Button>
+                                <Button variant="secondary" onClick={() => { setEditingTemplate(null); setIsCreatingTemplate(false); }}>Cancel</Button>
+                                <Button variant="primary" onClick={isCreatingTemplate ? handleSaveNewTemplate : handleUpdateTemplate} loading={templateSaving}>{isCreatingTemplate ? 'Create Template' : 'Update Template'}</Button>
                             </div>
                         </div>
                     </div>

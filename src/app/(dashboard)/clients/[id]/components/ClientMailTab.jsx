@@ -23,7 +23,7 @@ export default function ClientMailTab({ clientId }) {
     // Template form
     const [showTemplateForm, setShowTemplateForm] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState(null);
-    const [templateForm, setTemplateForm] = useState({ name: '', subject: '', html_body: '', variables: '', from_email: '', cc_email: '', bcc_email: '' });
+    const [templateForm, setTemplateForm] = useState({ name: '', subject: '', html_body: '', variables: '', to_email: '', cc_email: '', bcc_email: '' });
     const [templateSaving, setTemplateSaving] = useState(false);
 
     // SMTP form
@@ -31,6 +31,7 @@ export default function ClientMailTab({ clientId }) {
         host: '', port: 587, username: '', password: '', from_email: '', from_name: '', use_tls: true
     });
     const [smtpSaving, setSmtpSaving] = useState(false);
+    const [testRunning, setTestRunning] = useState(false);
 
     // Compose form
     const [composeForm, setComposeForm] = useState({
@@ -110,6 +111,52 @@ export default function ClientMailTab({ clientId }) {
         } finally { setSmtpSaving(false); }
     };
 
+    const handleTestConnection = async () => {
+        if (!smtpForm.host || !smtpForm.username) {
+            toast.error('Host and username are required for testing');
+            return;
+        }
+        if (!smtpForm.password && !smtpConfig?.id) {
+            toast.error('Password is required for testing new configuration');
+            return;
+        }
+
+        setTestRunning(true);
+        try {
+            const payload = { ...smtpForm };
+            // If testing existing config with empty password field, we might need to rely on backend to use saved password?
+            // Actually, the backend test endpoint expects a full config. 
+            // If password is empty in form but set in DB, we can't test "new" inputs without password.
+            // But if user didn't change password, they might expect it to work.
+            // However, for security, we usually don't send back the password.
+            // LIMITATION: Test only works if password is provided or if we implement "use stored password" in backend test.
+            // Our backend `ClientSmtpConfigCreate` makes password optional?
+            // Let's check backend schema. `password: str | None = None`.
+            // But logic: `server.login(data.username, data.password)`. If password is None, login fails.
+
+            // So verification: User MUST enter password to test.
+            if (!payload.password) {
+                // Check if we are editing existing and password field is empty.
+                if (smtpConfig && smtpConfig.password_set) {
+                    // We can't verify because we don't have the password client-side.
+                    // The backend `test_smtp_config` receives `ClientSmtpConfigCreate`.
+                    // It does NOT look up the existing config from DB to fill in missing password.
+                    // So we must ask user for password.
+                    toast.error('Please enter the password to test connection.');
+                    setTestRunning(false);
+                    return;
+                }
+            }
+
+            await api.post(`/clients/${clientId}/smtp/test`, payload);
+            toast.success('Connection successful! settings are valid.');
+        } catch (e) {
+            toast.error(e.message || e.detail || 'Connection failed');
+        } finally {
+            setTestRunning(false);
+        }
+    };
+
     const handleDeleteSmtp = async () => {
         if (!confirm('Revert to System Default SMTP? This will delete custom settings.')) return;
         setSmtpSaving(true);
@@ -132,13 +179,13 @@ export default function ClientMailTab({ clientId }) {
                 subject: template.subject,
                 html_body: template.html_body || '',
                 variables: (template.variables || []).join(', '),
-                from_email: template.from_email || '',
+                to_email: template.to_email || '',
                 cc_email: (template.cc_email || []).join(', '),
                 bcc_email: (template.bcc_email || []).join(', ')
             });
         } else {
             setEditingTemplate(null);
-            setTemplateForm({ name: '', subject: '', html_body: '', variables: '', from_email: '', cc_email: '', bcc_email: '' });
+            setTemplateForm({ name: '', subject: '', html_body: '', variables: '', to_email: '', cc_email: '', bcc_email: '' });
         }
         setShowTemplateForm(true);
     };
@@ -194,6 +241,7 @@ export default function ClientMailTab({ clientId }) {
                 template_id: templateId,
                 subject: tmpl.subject,
                 html_body: tmpl.html_body,
+                to_email: tmpl.to_email || p.to_email,
                 cc: (tmpl.cc_email || []).join(', '),
                 bcc: (tmpl.bcc_email || []).join(', '),
                 variables: vars,
@@ -331,7 +379,7 @@ export default function ClientMailTab({ clientId }) {
                                 <Input label="Subject Line" value={templateForm.subject} onChange={e => setTemplateForm(p => ({ ...p, subject: e.target.value }))} placeholder="Email subject..." required />
                             </div>
 
-                            <Input label="From Email (Optional)" value={templateForm.from_email} onChange={e => setTemplateForm(p => ({ ...p, from_email: e.target.value }))} placeholder="Override default sender. e.g. support@example.com" />
+                            <Input label="To Email (Optional)" value={templateForm.to_email} onChange={e => setTemplateForm(p => ({ ...p, to_email: e.target.value }))} placeholder="Default recipient. e.g. admin@example.com" />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <Input label="CC (Optional)" value={templateForm.cc_email} onChange={e => setTemplateForm(p => ({ ...p, cc_email: e.target.value }))} placeholder="Comma-separated emails" />
@@ -573,6 +621,9 @@ export default function ClientMailTab({ clientId }) {
                                     <div className="pt-4 flex justify-end gap-3">
                                         <Button variant="danger" ghost onClick={handleDeleteSmtp}>
                                             Reset to Default
+                                        </Button>
+                                        <Button variant="secondary" onClick={handleTestConnection} loading={testRunning}>
+                                            Test Connection
                                         </Button>
                                         <Button variant="primary" onClick={handleSaveSmtp} loading={smtpSaving} className="shadow-xl shadow-primary/20 py-2.5 px-6">
                                             <HiOutlineCheck className="w-5 h-5 mr-2" /> Save Configuration
