@@ -10,7 +10,8 @@ import {
     HiOutlinePlus, HiOutlineTrash, HiOutlinePencil, HiOutlineMail,
     HiOutlineCog, HiOutlineCheck, HiOutlineEye,
     HiOutlinePaperAirplane, HiOutlineTemplate, HiOutlineChevronLeft,
-    HiOutlineServer, HiOutlineShieldCheck
+    HiOutlineServer, HiOutlineShieldCheck, HiOutlineSearch, HiOutlineX,
+    HiOutlineCode
 } from 'react-icons/hi';
 
 export default function ClientMailTab({ clientId }) {
@@ -19,12 +20,14 @@ export default function ClientMailTab({ clientId }) {
     const [templates, setTemplates] = useState([]);
     const [smtpConfig, setSmtpConfig] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Template form
     const [showTemplateForm, setShowTemplateForm] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState(null);
     const [templateForm, setTemplateForm] = useState({ name: '', subject: '', html_body: '', variables: '', to_email: '', cc_email: '', bcc_email: '' });
     const [templateSaving, setTemplateSaving] = useState(false);
+    const [previewMode, setPreviewMode] = useState(false);
 
     // SMTP form
     const [smtpForm, setSmtpForm] = useState({
@@ -44,11 +47,12 @@ export default function ClientMailTab({ clientId }) {
             fetchTemplates();
             fetchSmtp();
         }
-    }, [clientId]);
+    }, [clientId, searchTerm]); // Search triggers fetch
 
     const fetchTemplates = async () => {
         try {
-            const res = await api.get(`/clients/${clientId}/mail-templates`);
+            const query = searchTerm ? `?search=${searchTerm}` : '';
+            const res = await api.get(`/clients/${clientId}/mail-templates${query}`);
             setTemplates(res.items || []);
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -102,7 +106,7 @@ export default function ClientMailTab({ clientId }) {
         setSmtpSaving(true);
         try {
             const payload = { ...smtpForm };
-            if (!payload.password && smtpConfig) delete payload.password; // Don't send empty password on update
+            if (!payload.password && smtpConfig) delete payload.password;
             const res = await api.post(`/clients/${clientId}/smtp`, payload);
             setSmtpConfig(res);
             toast.success('SMTP settings saved!');
@@ -124,30 +128,16 @@ export default function ClientMailTab({ clientId }) {
         setTestRunning(true);
         try {
             const payload = { ...smtpForm };
-            // If testing existing config with empty password field, we might need to rely on backend to use saved password?
-            // Actually, the backend test endpoint expects a full config. 
-            // If password is empty in form but set in DB, we can't test "new" inputs without password.
-            // But if user didn't change password, they might expect it to work.
-            // However, for security, we usually don't send back the password.
-            // LIMITATION: Test only works if password is provided or if we implement "use stored password" in backend test.
-            // Our backend `ClientSmtpConfigCreate` makes password optional?
-            // Let's check backend schema. `password: str | None = None`.
-            // But logic: `server.login(data.username, data.password)`. If password is None, login fails.
-
-            // So verification: User MUST enter password to test.
-            if (!payload.password) {
-                // Check if we are editing existing and password field is empty.
-                if (smtpConfig && smtpConfig.password_set) {
-                    // We can't verify because we don't have the password client-side.
-                    // The backend `test_smtp_config` receives `ClientSmtpConfigCreate`.
-                    // It does NOT look up the existing config from DB to fill in missing password.
-                    // So we must ask user for password.
-                    toast.error('Please enter the password to test connection.');
-                    setTestRunning(false);
-                    return;
-                }
+            if (!payload.password && smtpConfig?.password_set) {
+                // Prompt for password if not provided? 
+                // Backend test endpoint might fail if password is removed.
+                // Actually, let's assume if it's saved, we can't test without re-entering password for security.
+                // If the backend test endpoint supported "use stored password", we could omit it.
+                // For now, let's warn user.
+                toast.error('Please enter the password to test connection.');
+                setTestRunning(false);
+                return;
             }
-
             await api.post(`/clients/${clientId}/smtp/test`, payload);
             toast.success('Connection successful! settings are valid.');
         } catch (e) {
@@ -171,28 +161,38 @@ export default function ClientMailTab({ clientId }) {
     };
 
     // ===== Templates =====
-    const openTemplateForm = (template = null) => {
+    const openTemplateForm = async (template = null) => {
         if (template) {
-            setEditingTemplate(template);
-            setTemplateForm({
-                name: template.name,
-                subject: template.subject,
-                html_body: template.html_body || '',
-                variables: (template.variables || []).join(', '),
-                to_email: template.to_email || '',
-                cc_email: (template.cc_email || []).join(', '),
-                bcc_email: (template.bcc_email || []).join(', ')
-            });
+            setLoading(true);
+            try {
+                const fullTemplate = await api.get(`/clients/${clientId}/mail-templates/${template.id}`);
+                setEditingTemplate(fullTemplate);
+                setTemplateForm({
+                    name: fullTemplate.name,
+                    subject: fullTemplate.subject,
+                    html_body: fullTemplate.html_body || '',
+                    variables: (fullTemplate.variables || []).join(', '),
+                    to_email: fullTemplate.to_email || '',
+                    cc_email: (fullTemplate.cc_email || []).join(', '),
+                    bcc_email: (fullTemplate.bcc_email || []).join(', ')
+                });
+                setShowTemplateForm(true);
+            } catch (e) {
+                toast.error('Failed to load template details');
+            } finally {
+                setLoading(false);
+            }
         } else {
             setEditingTemplate(null);
             setTemplateForm({ name: '', subject: '', html_body: '', variables: '', to_email: '', cc_email: '', bcc_email: '' });
+            setShowTemplateForm(true);
+            setPreviewMode(false);
         }
-        setShowTemplateForm(true);
     };
 
     const handleSaveTemplate = async () => {
-        if (!templateForm.name || !templateForm.subject || !templateForm.html_body) {
-            toast.error('Name, subject, and body are required');
+        if (!templateForm.name || !templateForm.subject || !templateForm.html_body || !templateForm.to_email) {
+            toast.error('Name, subject, recipient email, and body are required');
             return;
         }
         setTemplateSaving(true);
@@ -280,77 +280,95 @@ export default function ClientMailTab({ clientId }) {
     ];
 
     return (
-        <div className="space-y-6">
-            {/* Sub-tabs */}
-            <div className="flex items-center gap-1 bg-muted/40 p-1.5 rounded-xl w-fit border border-border/40 backdrop-blur-sm">
-                {sections.map(s => {
-                    const Icon = s.icon;
-                    const isActive = activeSection === s.id;
-                    return (
-                        <button key={s.id} onClick={() => setActiveSection(s.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
-                                ? 'bg-background text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10 scale-100'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-background/50 scale-95 hover:scale-100'}`}>
-                            <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : ''}`} /> {s.label}
-                        </button>
-                    );
-                })}
+        <div className="space-y-6 animate-fade-in-up">
+            {/* Sub-tabs with refined styling */}
+            <div className="p-1.5 rounded-xl bg-muted/20 border border-border/40 backdrop-blur-sm w-fit flex gap-1 shadow-inner">
+                {sections.map(s => (
+                    <button
+                        key={s.id}
+                        onClick={() => setActiveSection(s.id)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${activeSection === s.id
+                            ? 'bg-background text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
+                    >
+                        <s.icon className={`w-4 h-4 ${activeSection === s.id ? 'text-primary' : ''}`} /> {s.label}
+                    </button>
+                ))}
             </div>
 
             {/* ===== TEMPLATES SECTION ===== */}
             {activeSection === 'templates' && !showTemplateForm && (
                 <div className="space-y-6 animate-fade-in">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h3 className="text-lg font-bold text-foreground">Mail Templates</h3>
+                            <h3 className="text-xl font-bold text-foreground">Mail Templates</h3>
                             <p className="text-sm text-muted-foreground">Reusable email templates with variable substitution</p>
                         </div>
-                        <Button variant="primary" onClick={() => openTemplateForm()} className="shadow-lg shadow-primary/20">
-                            <HiOutlinePlus className="w-4 h-4" /> New Template
-                        </Button>
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-56 group">
+                                <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none" />
+                                <input
+                                    type="text"
+                                    placeholder="Search templates..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-muted/10 border border-border/60 focus:bg-background focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                                />
+                            </div>
+                            <Button variant="primary" onClick={() => openTemplateForm()} className="shadow-lg shadow-primary/20 shrink-0">
+                                <HiOutlinePlus className="w-4 h-4" /> <span className="hidden md:inline ml-1.5">New Template</span>
+                            </Button>
+                        </div>
                     </div>
 
                     {loading ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {[1, 2].map(i => <Card key={i}><CardBody className="h-24 animate-pulse bg-muted/20" /></Card>)}
+                            {[1, 2].map(i => <div key={i} className="h-32 bg-muted/10 rounded-xl animate-pulse" />)}
                         </div>
                     ) : templates.length === 0 ? (
-                        <Card>
-                            <CardBody className="text-center py-12">
-                                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                    <HiOutlineTemplate className="w-8 h-8 text-emerald-500/40" />
-                                </div>
-                                <h3 className="text-lg font-bold text-foreground mb-2">No templates yet</h3>
-                                <p className="text-muted-foreground mb-4">Create your first email template to get started</p>
-                                <Button variant="primary" onClick={() => openTemplateForm()}><HiOutlinePlus className="w-4 h-4" /> Create Template</Button>
-                            </CardBody>
-                        </Card>
+                        <div className="text-center py-16 bg-muted/5 rounded-2xl border border-dashed border-border/60">
+                            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-500/10">
+                                <HiOutlineTemplate className="w-8 h-8 text-emerald-500/60" />
+                            </div>
+                            <h3 className="text-lg font-bold text-foreground mb-2">No templates found</h3>
+                            <p className="text-muted-foreground mb-6 max-w-sm mx-auto">Create your first email template to get started with automated messaging.</p>
+                            <Button variant="primary" onClick={() => openTemplateForm()}><HiOutlinePlus className="w-4 h-4 mr-2" /> Create Template</Button>
+                        </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                             {templates.map(t => (
-                                <Card key={t.id} className="hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer group" onClick={() => openTemplateForm(t)}>
-                                    <CardBody className="flex items-start justify-between">
-                                        <div className="flex items-start gap-4">
-                                            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                                <HiOutlineMail className="w-5 h-5 text-emerald-500" />
+                                <Card key={t.id} className="hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group relative overflow-hidden" onClick={() => openTemplateForm(t)}>
+                                    <CardBody className="flex flex-col h-full p-6">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-xl flex items-center justify-center flex-shrink-0 border border-emerald-500/10">
+                                                    <HiOutlineMail className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">{t.name}</h4>
+                                                    <p className="text-xs text-muted-foreground">Updated {new Date(t.updated_at || t.created_at).toLocaleDateString()}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{t.name}</h4>
-                                                <p className="text-sm text-muted-foreground line-clamp-1">{t.subject}</p>
-                                                {t.variables?.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1.5 mt-2">
-                                                        {t.variables.map(v => (
-                                                            <span key={v} className="text-[10px] px-1.5 py-0.5 bg-muted/50 border border-border/50 rounded text-muted-foreground font-mono">{`{{${v}}}`}</span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id); }} className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 text-muted-foreground hover:text-rose-500 transition-colors">
+                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id); }} className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 text-muted-foreground/50 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
                                                 <HiOutlineTrash className="w-4 h-4" />
                                             </button>
                                         </div>
+
+                                        <div className="mb-4 flex-1">
+                                            <p className="text-sm text-foreground font-medium mb-1 line-clamp-1"><span className="text-muted-foreground mr-1">Subject:</span> {t.subject}</p>
+                                            <p className="text-xs text-muted-foreground line-clamp-2">{(t.html_body || '').replace(/<[^>]+>/g, '')}</p>
+                                        </div>
+
+                                        {t.variables?.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 pt-4 border-t border-border/30 mt-auto">
+                                                {t.variables.slice(0, 3).map(v => (
+                                                    <span key={v} className="text-[10px] px-1.5 py-0.5 bg-muted/50 border border-border/50 rounded text-muted-foreground font-mono">{v}</span>
+                                                ))}
+                                                {t.variables.length > 3 && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 bg-muted/50 border border-border/50 rounded text-muted-foreground">+{t.variables.length - 3}</span>
+                                                )}
+                                            </div>
+                                        )}
                                     </CardBody>
                                 </Card>
                             ))}
@@ -361,65 +379,86 @@ export default function ClientMailTab({ clientId }) {
 
             {/* Template Form */}
             {activeSection === 'templates' && showTemplateForm && (
-                <div className="space-y-6 animate-fade-in">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setShowTemplateForm(false)} className="p-2 rounded-lg hover:bg-muted/30 transition-colors">
-                            <HiOutlineChevronLeft className="w-5 h-5" />
+                <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
+                    <div className="flex items-center gap-3 mb-2">
+                        <button onClick={() => setShowTemplateForm(false)} className="p-2 rounded-xl bg-background border border-border/60 hover:bg-muted/50 transition-colors shadow-sm">
+                            <HiOutlineChevronLeft className="w-5 h-5 text-muted-foreground" />
                         </button>
                         <div>
-                            <h3 className="text-lg font-bold text-foreground">{editingTemplate ? 'Edit Template' : 'New Template'}</h3>
+                            <h3 className="text-xl font-bold text-foreground">{editingTemplate ? 'Edit Template' : 'New Template'}</h3>
                             <p className="text-sm text-muted-foreground">Design your email template</p>
                         </div>
                     </div>
 
-                    <Card>
-                        <CardBody className="space-y-5">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <Input label="Template Name" value={templateForm.name} onChange={e => setTemplateForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g., Welcome Email" required />
-                                <Input label="Subject Line" value={templateForm.subject} onChange={e => setTemplateForm(p => ({ ...p, subject: e.target.value }))} placeholder="Email subject..." required />
-                            </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-1 space-y-6">
+                            <Card>
+                                <CardHeader title="Details" />
+                                <CardBody className="space-y-4">
+                                    <Input label="Template Name" value={templateForm.name} onChange={e => setTemplateForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g., Welcome Email" required />
+                                    <Input label="Subject Line" value={templateForm.subject} onChange={e => setTemplateForm(p => ({ ...p, subject: e.target.value }))} placeholder="Email subject..." required />
+                                    <Input label="To Email" value={templateForm.to_email} onChange={e => setTemplateForm(p => ({ ...p, to_email: e.target.value }))} placeholder="Static recipient (e.g. admin@example.com)" required />
+                                    <Input label="CC (Opt)" value={templateForm.cc_email} onChange={e => setTemplateForm(p => ({ ...p, cc_email: e.target.value }))} placeholder="Comma-separated" className="bg-muted/10 border-border/60" />
+                                    <Input label="BCC (Opt)" value={templateForm.bcc_email} onChange={e => setTemplateForm(p => ({ ...p, bcc_email: e.target.value }))} placeholder="Comma-separated" className="bg-muted/10 border-border/60" />
 
-                            <Input label="To Email (Optional)" value={templateForm.to_email} onChange={e => setTemplateForm(p => ({ ...p, to_email: e.target.value }))} placeholder="Default recipient. e.g. admin@example.com" />
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <Input label="CC (Optional)" value={templateForm.cc_email} onChange={e => setTemplateForm(p => ({ ...p, cc_email: e.target.value }))} placeholder="Comma-separated emails" />
-                                <Input label="BCC (Optional)" value={templateForm.bcc_email} onChange={e => setTemplateForm(p => ({ ...p, bcc_email: e.target.value }))} placeholder="Comma-separated emails" />
-                            </div>
-
-                            <div className="input-wrapper">
-                                <label className="input-label">HTML Body <span className="text-rose-500">*</span></label>
-                                <textarea
-                                    value={templateForm.html_body}
-                                    onChange={e => setTemplateForm(p => ({ ...p, html_body: e.target.value }))}
-                                    placeholder="<h2>Hello {{name}}</h2><p>Welcome to our platform!</p>"
-                                    className="w-full px-4 py-3 rounded-lg bg-muted/10 border border-border/60 focus:bg-background focus:ring-2 focus:ring-primary/20 outline-none transition-all min-h-[300px] font-mono text-sm leading-relaxed"
-                                />
-                                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                                    <HiOutlineEye className="w-3 h-3" /> Use {'{{variable_name}}'} for dynamic content substitution
-                                </p>
-                            </div>
-
-                            <Input
-                                label="Variables"
-                                value={templateForm.variables}
-                                onChange={e => setTemplateForm(p => ({ ...p, variables: e.target.value }))}
-                                placeholder="name, email, company, date (comma separated)"
-                                description="Define variables to be used in the template body"
-                            />
-                        </CardBody>
-                        <div className="p-6 bg-muted/5 border-t border-border/40 flex gap-4 rounded-b-xl">
-                            <Button variant="secondary" onClick={() => setShowTemplateForm(false)} className="flex-1 py-2.5">Cancel</Button>
-                            <Button variant="primary" onClick={handleSaveTemplate} loading={templateSaving} className="flex-1 shadow-lg shadow-primary/20 py-2.5">
-                                <HiOutlineCheck className="w-5 h-5 mr-2" /> {editingTemplate ? 'Update' : 'Create'} Template
-                            </Button>
+                                    <Input
+                                        label="Variables"
+                                        value={templateForm.variables}
+                                        onChange={e => setTemplateForm(p => ({ ...p, variables: e.target.value }))}
+                                        placeholder="name, email, date"
+                                        description="Comma separated list of variables"
+                                        className="bg-muted/10 border-border/60"
+                                    />
+                                </CardBody>
+                            </Card>
                         </div>
-                    </Card>
+
+                        <div className="lg:col-span-2 space-y-6">
+                            <Card className="flex flex-col h-full min-h-[500px]">
+                                <div className="p-4 border-b border-border/40 flex items-center justify-between bg-muted/5">
+                                    <label className="text-sm font-bold text-foreground">Content</label>
+                                    <div className="flex bg-muted/20 p-1 rounded-lg border border-border/30">
+                                        <button
+                                            onClick={() => setPreviewMode(false)}
+                                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${!previewMode ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                                        >
+                                            <HiOutlineCode className="w-3.5 h-3.5 inline mr-1" /> Code
+                                        </button>
+                                        <button
+                                            onClick={() => setPreviewMode(true)}
+                                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${previewMode ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                                        >
+                                            <HiOutlineEye className="w-3.5 h-3.5 inline mr-1" /> Preview
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {previewMode ? (
+                                    <div className="p-6 bg-white min-h-[400px] prose prose-sm max-w-none overflow-y-auto border-b border-border/40 flex-1" dangerouslySetInnerHTML={{ __html: templateForm.html_body }} />
+                                ) : (
+                                    <textarea
+                                        value={templateForm.html_body}
+                                        onChange={e => setTemplateForm(p => ({ ...p, html_body: e.target.value }))}
+                                        placeholder="<html>..."
+                                        className="w-full h-full min-h-[400px] p-4 bg-muted/5 border-none focus:ring-0 font-mono text-xs leading-relaxed resize-none flex-1"
+                                    />
+                                )}
+
+                                <div className="p-4 border-t border-border/40 flex gap-4 bg-background rounded-b-xl">
+                                    <Button variant="secondary" onClick={() => setShowTemplateForm(false)} className="w-1/3">Cancel</Button>
+                                    <Button variant="primary" onClick={handleSaveTemplate} loading={templateSaving} className="w-2/3 shadow-xl shadow-primary/20">
+                                        <HiOutlineCheck className="w-5 h-5 mr-2" /> {editingTemplate ? 'Update' : 'Create'} Template
+                                    </Button>
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
                 </div>
             )}
 
             {/* ===== COMPOSE SECTION ===== */}
             {activeSection === 'compose' && (
-                <div className="space-y-6 animate-fade-in">
+                <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
                     <div>
                         <h3 className="text-lg font-bold text-foreground">Send Email</h3>
                         <p className="text-sm text-muted-foreground">Compose and send email using client's SMTP</p>
@@ -467,7 +506,10 @@ export default function ClientMailTab({ clientId }) {
                             </div>
 
                             <div className="input-wrapper">
-                                <label className="input-label">Message Body (HTML)</label>
+                                <label className="input-label flex items-center justify-between">
+                                    Message Body (HTML)
+                                    <span className="text-xs font-normal text-muted-foreground">HTML Supported</span>
+                                </label>
                                 <textarea
                                     value={composeForm.html_body}
                                     onChange={e => setComposeForm(p => ({ ...p, html_body: e.target.value }))}
@@ -502,7 +544,7 @@ export default function ClientMailTab({ clientId }) {
 
             {/* ===== SMTP SECTION ===== */}
             {activeSection === 'smtp' && (
-                <div className="space-y-6 animate-fade-in">
+                <div className="space-y-6 animate-fade-in max-w-3xl mx-auto">
                     <div>
                         <h3 className="text-lg font-bold text-foreground">SMTP Configuration</h3>
                         <p className="text-sm text-muted-foreground">Configure custom mail server settings for this client</p>
@@ -511,19 +553,19 @@ export default function ClientMailTab({ clientId }) {
                     <div className="flex bg-muted/20 p-1.5 rounded-xl border border-border/40 w-full sm:w-fit">
                         <button
                             onClick={() => {
-                                if (smtpConfig && !smtpConfig.id) setSmtpConfig(null); // If unsaved/new, just cancel
-                                else if (smtpConfig) handleDeleteSmtp(); // If saved, delete
+                                if (smtpConfig && !smtpConfig.id) setSmtpConfig(null);
+                                else if (smtpConfig) handleDeleteSmtp();
                             }}
                             className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${!smtpConfig
                                 ? 'bg-background text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                 }`}
                         >
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" /> System Default
+                            <span className={`w-2 h-2 rounded-full ${!smtpConfig ? 'bg-emerald-500' : 'bg-muted-foreground'}`} /> System Default
                         </button>
                         <button
                             onClick={() => {
-                                if (!smtpConfig) setSmtpConfig({}); // Switch to Custom Mode (unsaved)
+                                if (!smtpConfig) setSmtpConfig({});
                             }}
                             className={`flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${smtpConfig
                                 ? 'bg-background text-primary shadow-sm ring-1 ring-black/5 dark:ring-white/10'
@@ -547,31 +589,10 @@ export default function ClientMailTab({ clientId }) {
                                         <p className="text-muted-foreground mt-1 max-w-lg">Emails are currently sent via the global system mail server. No further configuration is needed unless you want to use a specific branding or sender identity.</p>
                                     </div>
                                 </div>
-                                <div className="pl-20">
-                                    <Button variant="outline" onClick={() => setSmtpConfig({})}>
-                                        <HiOutlineCog className="w-4 h-4 mr-2" /> Override with Custom SMTP
-                                    </Button>
-                                </div>
                             </CardBody>
                         </Card>
                     ) : (
                         <div className="space-y-6 animate-slide-up-fade">
-                            <Card className="border-l-4 border-l-amber-500">
-                                <CardBody className="py-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-full flex items-center justify-center border border-amber-100 dark:border-amber-800/30">
-                                                <HiOutlineCog className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-foreground">Custom SMTP Configuration</h4>
-                                                <p className="text-sm text-muted-foreground">Emails will be sent using these custom credentials.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardBody>
-                            </Card>
-
                             <Card>
                                 <CardHeader title="SMTP Server Settings" />
                                 <CardBody className="space-y-6">

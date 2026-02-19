@@ -23,8 +23,13 @@ export default function CreateEmployeePage() {
   const [employees, setEmployees] = useState([]);
   const [filteredDesignations, setFilteredDesignations] = useState([]);
 
+  // Employee ID Logic
+  const [autoGenerate, setAutoGenerate] = useState(true);
+  const [nextCode, setNextCode] = useState('');
+
   const [formData, setFormData] = useState({
     // Essential fields only
+    employee_code: '',
     first_name: '',
     last_name: '',
     email: '',
@@ -54,10 +59,25 @@ export default function CreateEmployeePage() {
       setDesignations(desigRes.items || desigRes || []);
       setEmployees(empRes.items || empRes || []);
       setRoles(rolesRes || []);
+
+      // Fetch next code on load
+      fetchNextCode();
     } catch (error) {
       console.error('Error fetching dropdown data:', error);
     }
   };
+
+  const fetchNextCode = async () => {
+    try {
+      const res = await api.get('/employees/next-code');
+      setNextCode(res.code);
+    } catch (e) { console.error(e); }
+  };
+
+  // Refresh code when toggling back to auto
+  useEffect(() => {
+    if (autoGenerate) fetchNextCode();
+  }, [autoGenerate]);
 
   // Filter designations when department changes
   useEffect(() => {
@@ -116,6 +136,11 @@ export default function CreateEmployeePage() {
         }
       });
 
+      // Handle Auto-Generate
+      if (autoGenerate) {
+        cleanData.employee_code = null; // Let backend generate
+      }
+
       await api.post('/employees', cleanData);
       toast.success('Employee created successfully!');
       setTimeout(() => router.push('/employees'), 1500);
@@ -150,6 +175,38 @@ export default function CreateEmployeePage() {
         <Card>
           <CardHeader title="Employee Information" />
           <CardBody className="space-y-6">
+            {/* Employee ID Section */}
+            <div className="flex flex-col md:flex-row md:items-end gap-4 pb-4 border-b border-border/50">
+              <div className="flex-1">
+                <Input
+                  label="Employee ID"
+                  name="employee_code"
+                  value={autoGenerate ? (nextCode || 'Loading...') : formData.employee_code}
+                  onChange={handleChange}
+                  placeholder="e.g. AW0001"
+                  disabled={autoGenerate}
+                  required={!autoGenerate}
+                />
+              </div>
+              <div className="pb-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-sm font-medium text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={autoGenerate}
+                    onChange={e => {
+                      setAutoGenerate(e.target.checked);
+                      if (e.target.checked) setFormData(p => ({ ...p, employee_code: '' }));
+                    }}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                  />
+                  <span>Auto-generate ID</span>
+                </label>
+                <p className="text-xs text-muted-foreground mt-1 ml-6">
+                  {autoGenerate ? "System will assign the next available ID." : "Manually enter a unique ID."}
+                </p>
+              </div>
+            </div>
+
             {/* Name Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input

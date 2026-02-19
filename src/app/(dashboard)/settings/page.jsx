@@ -1,9 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
+import Button from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
+import api from '@/lib/api';
+import { useToast } from '@/context/ToastContext';
 import {
   HiOutlineUser, HiOutlineShieldCheck, HiOutlineBell, HiOutlineMoon,
   HiOutlineOfficeBuilding, HiOutlineLocationMarker, HiOutlineCollection, HiOutlineIdentification,
@@ -17,6 +20,25 @@ const HR_ROLES = ['HR Manager', 'HR', 'HR_MANAGER'];
 
 export default function SettingsOverviewPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [migrating, setMigrating] = useState(false);
+
+  const handleMigrate = async () => {
+    if (!confirm('Run database migration? Only do this if you are experiencing database errors.')) return;
+    setMigrating(true);
+    try {
+      const res = await api.post('/dashboard/migrate');
+      if (res.status === 'success') {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } catch (e) {
+      toast.error(e.message || 'Migration failed');
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   const userRole = useMemo(() => {
     const roleName = user?.role?.name || user?.role?.code || '';
@@ -117,6 +139,28 @@ export default function SettingsOverviewPage() {
           ))}
         </div>
       </div>
-    </div>
+
+
+      {/* Maintenance (Super Admin Only) */}
+      {
+        isSuperAdmin && (
+          <div className="mt-8">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-5 rounded-full bg-gradient-to-b from-red-500 to-red-500/50" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">System Maintenance</h3>
+            </div>
+            <Card className="p-6 border-red-100 bg-red-50/30">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-red-900">Database Maintenance</h3>
+                  <p className="text-sm text-red-700">Run this if you encounter 500 Errors after an update.</p>
+                </div>
+                <Button onClick={handleMigrate} isLoading={migrating} variant="danger">Run Database Migration</Button>
+              </div>
+            </Card>
+          </div>
+        )
+      }
+    </div >
   );
 }
