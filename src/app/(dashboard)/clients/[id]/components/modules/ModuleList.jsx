@@ -8,11 +8,12 @@ import api from '@/lib/api';
 import {
     HiOutlineKey, HiOutlineTrash, HiOutlineRefresh, HiOutlinePlus,
     HiOutlineDatabase, HiOutlineCollection, HiOutlineChevronRight,
-    HiOutlineClipboardCopy, HiOutlineSearch, HiOutlinePencil
+    HiOutlineClipboardCopy, HiOutlineSearch, HiOutlinePencil, HiOutlineCode, HiOutlineX
 } from 'react-icons/hi';
 
 export default function ModuleList({
     clientId,
+    clientSlug,
     modules,
     loading,
     onCreateModule,
@@ -26,7 +27,9 @@ export default function ModuleList({
     const toast = useToast();
     const [searchTerm, setSearchTerm] = useState('');
     const [keyLoading, setKeyLoading] = useState(false);
+
     const [generatedKey, setGeneratedKey] = useState(null);
+    const [selectedApiModule, setSelectedApiModule] = useState(null);
 
     // Debounce search
     const handleSearch = (e) => {
@@ -184,6 +187,9 @@ export default function ModuleList({
                                         <button onClick={(e) => { e.stopPropagation(); onEditModule(mod); }} className="p-2 rounded-lg hover:bg-primary/10 text-muted-foreground/50 hover:text-primary transition-colors" title="Edit Schema">
                                             <HiOutlinePencil className="w-5 h-5" />
                                         </button>
+                                        <button onClick={(e) => { e.stopPropagation(); setSelectedApiModule(mod); }} className="p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-muted-foreground/50 hover:text-amber-500 transition-colors" title="API Integration">
+                                            <HiOutlineCode className="w-5 h-5" />
+                                        </button>
                                         <button onClick={(e) => { e.stopPropagation(); onDeleteModule(mod.id); }} className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 text-muted-foreground/50 hover:text-rose-500 transition-colors" title="Delete Module">
                                             <HiOutlineTrash className="w-5 h-5" />
                                         </button>
@@ -217,6 +223,69 @@ export default function ModuleList({
                             </CardBody>
                         </Card>
                     ))}
+                </div>
+            )}
+            {/* API Integration Modal */}
+            {selectedApiModule && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedApiModule(null)}>
+                    <div className="bg-background border border-border rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-border">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-amber-500/10 rounded-lg">
+                                    <HiOutlineCode className="w-6 h-6 text-amber-500" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg">API Integration</h3>
+                                    <p className="text-sm text-muted-foreground"> Integrate {selectedApiModule.name} with external tools</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedApiModule(null)} className="p-2 hover:bg-muted rounded-lg transition-colors">
+                                <HiOutlineX className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            <div>
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Endpoint URL</label>
+                                <div className="flex items-center gap-2">
+                                    <code className="flex-1 block text-sm font-mono bg-muted/30 border border-border p-3 rounded-lg break-all select-all">
+                                        POST {process.env.NEXT_PUBLIC_API_URL}/public/{clientSlug}/{selectedApiModule.slug}/records
+                                    </code>
+                                    <button onClick={() => copyToClipboard(`POST ${process.env.NEXT_PUBLIC_API_URL}/public/${clientSlug}/${selectedApiModule.slug}/records`)} className="p-3 bg-muted/30 border border-border rounded-lg hover:bg-primary/10 hover:text-primary transition-colors">
+                                        <HiOutlineClipboardCopy className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Authentication Header</label>
+                                <div className="bg-muted/30 border border-border rounded-lg p-3 font-mono text-sm">
+                                    X-API-Key: {generatedKey || 'YOUR_API_KEY'}
+                                </div>
+                                {!generatedKey && !apiKeyInfo?.has_api_key && (
+                                    <p className="text-xs text-amber-500 mt-2 flex items-center gap-1">
+                                        <HiOutlineKey className="w-3 h-3" /> A valid API Key is required. Generate one above.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 block">Sample Request Body</label>
+                                <pre className="bg-muted/30 border border-border rounded-lg p-4 font-mono text-xs overflow-x-auto text-foreground/80">
+                                    {JSON.stringify({
+                                        "data": selectedApiModule.fields?.reduce((acc, field) => {
+                                            acc[field.name] = field.type === 'number' ? 123 : "sample_value";
+                                            return acc;
+                                        }, {}) || {}
+                                    }, null, 2)}
+                                </pre>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-border bg-muted/5 flex justify-end">
+                            <Button variant="outline" onClick={() => setSelectedApiModule(null)}>Close</Button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

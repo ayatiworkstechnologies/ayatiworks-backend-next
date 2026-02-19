@@ -108,6 +108,7 @@ export default function ClientModulesTab({ clientId, clientSlug, isClientView = 
     return (
         <ModuleList
             clientId={clientId}
+            clientSlug={clientSlug}
             modules={modules}
             loading={loading}
             onCreateModule={handleCreateModule}
